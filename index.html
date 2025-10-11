@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <title>DIY Poster Creator – 24×30 / 24×50 in</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- html2canvas & jsPDF -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <!-- Google Fonts: 20 families (sans + handwriting) -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto:wght@400;700&family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Poppins:wght@400;700&family=Nunito:wght@400;700&family=Source+Sans+3:wght@400;700&family=Ubuntu:wght@400;700&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Pacifico&family=Sacramento&family=Dancing+Script:wght@400;700&family=Indie+Flower&family=Great+Vibes&family=Satisfy&family=Patrick+Hand&family=Amatic+SC:wght@400;700&family=Shadows+Into+Light&display=swap" rel="stylesheet">
+
+  <style>
+    .draggable{
+      position:absolute; cursor:move; user-select:none; touch-action:none;
+      white-space:pre-wrap; line-height:1.15;
+    }
+    #previewStage{
+      width:100%; max-width:960px; margin:0 auto; aspect-ratio:4/5;
+      position:relative; background:#f3f4f6; border:1px dashed #cbd5e1; overflow:hidden;
+    }
+    #previewBg{ position:absolute; inset:0; background:#e5e7eb center/cover no-repeat; }
+    #printStage{ position:fixed; left:-99999px; top:-99999px; background:#fff; overflow:hidden; }
+    .guide{ position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(0,0,0,.08); }
+    .guide.v{ top:0; bottom:0; left:50%; width:1px; height:auto; }
+
+    .thumb-strip{ scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; }
+    .thumb{ scroll-snap-align:start; min-width:120px; height:80px; background-size:cover; background-position:center; border:2px solid transparent;}
+    .thumb.active{ outline:2px solid #6366f1; border-color:#6366f1; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <!-- Header -->
+  <header class="border-b bg-white sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+      <h1 class="text-lg md:text-xl font-semibold">DIY Poster Creator</h1>
+      <div class="flex items-center gap-2 text-sm">
+        <span class="px-2 py-1 rounded bg-slate-100">24×30 / 24×50 in</span>
+        <span class="hidden md:inline text-slate-500">Preview 1920px • Print 300/200 dpi</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <!-- Preview -->
+    <section class="lg:col-span-8">
+      <div id="tipBar" class="mb-3 text-xs md:text-sm p-2 rounded border bg-blue-50 text-blue-800">
+        The page loads <b>1920-px</b> previews for speed. Use the buttons below to download at <b>300 dpi</b> (or 200 dpi fallback) for printing.
+      </div>
+
+      <div id="previewStage" class="rounded-lg shadow-sm bg-white">
+        <div id="previewBg"></div>
+        <div class="guide hidden" id="guideH"></div>
+        <div class="guide v hidden" id="guideV"></div>
+
+        <!-- Draggable texts -->
+        <div id="t1" class="draggable text-3xl font-bold" style="left:10%; top:10%;">MAIN TITLE</div>
+        <div id="t2" class="draggable text-xl" style="left:10%; top:25%;">Subtitle goes here</div>
+        <div id="t3" class="draggable text-base" style="left:10%; top:40%;">Description or notes</div>
+      </div>
+
+      <div class="mt-3 text-xs md:text-sm text-slate-600" id="specInfo"></div>
+    </section>
+
+    <!-- Controls -->
+    <aside class="lg:col-span-4">
+      <div class="bg-white rounded-xl shadow p-4 space-y-4">
+        <!-- Size -->
+        <div>
+          <label class="block text-sm font-medium mb-1">Poster Size (inches)</label>
+          <select id="sizeSelect" class="w-full border rounded px-3 py-2">
+            <option value="24x30">24 × 30 in (preview 1920×2400)</option>
+            <option value="24x50">24 × 50 in (preview 1920×4000)</option>
+          </select>
+        </div>
+
+        <!-- DPI + Guides -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-sm font-medium mb-1">Print DPI</label>
+            <select id="dpiSelect" class="w-full border rounded px-3 py-2">
+              <option value="300" selected>300 dpi (print-ready)</option>
+              <option value="200">200 dpi (lighter)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Guides</label>
+            <select id="guideSelect" class="w-full border rounded px-3 py-2">
+              <option value="off" selected>Off</option>
+              <option value="on">Show center guides</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Background picker -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <label class="text-sm font-medium">Backgrounds</label>
+            <div class="flex items-center gap-2">
+              <input type="file" id="bgUpload" accept="image/*" class="block w-[180px] text-xs" />
+              <button id="resetBg" class="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-slate-200">Reset</button>
+            </div>
+          </div>
+
+          <!-- Horizontal sliding library -->
+          <div class="relative">
+            <button id="thumbPrev" class="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white shadow hover:bg-slate-50" aria-label="Prev">‹</button>
+            <div id="thumbStrip" class="thumb-strip flex gap-2 overflow-x-auto px-8 py-2 rounded border bg-slate-50"></div>
+            <button id="thumbNext" class="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white shadow hover:bg-slate-50" aria-label="Next">›</button>
+          </div>
+
+          <p class="text-xs text-slate-500">
+            Tip: Keep matching visuals for preview (1920-px) and print (300/200 dpi). Local uploads are embedded and added to the library for reuse.
+          </p>
+        </div>
+
+        <!-- Text editor -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium">Edit Text</span>
+            <div class="text-xs space-x-1">
+              <button data-target="t1" class="pickTarget px-2 py-1 rounded bg-slate-100">Text 1</button>
+              <button data-target="t2" class="pickTarget px-2 py-1 rounded bg-slate-100">Text 2</button>
+              <button data-target="t3" class="pickTarget px-2 py-1 rounded bg-slate-100">Text 3</button>
+            </div>
+          </div>
+
+          <textarea id="textContent" rows="3" class="w-full border rounded px-3 py-2 text-sm" placeholder="Type here…"></textarea>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs mb-1">Font size (preview px)</label>
+              <input type="number" id="fontSize" class="w-full border rounded px-2 py-1 text-sm" value="36" min="8" max="300" />
+            </div>
+            <div>
+              <label class="block text-xs mb-1">Color</label>
+              <input type="color" id="fontColor" class="w-full h-[36px] border rounded" value="#111827" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs mb-1">Font family</label>
+              <select id="fontFamily" class="w-full border rounded px-2 py-1 text-sm">
+                <!-- 10 Sans -->
+                <option value="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Inter (Sans)</option>
+                <option value="'Roboto', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Roboto (Sans)</option>
+                <option value="'Open Sans', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Open Sans (Sans)</option>
+                <option value="'Lato', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Lato (Sans)</option>
+                <option value="'Montserrat', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Montserrat (Sans)</option>
+                <option value="'Poppins', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Poppins (Sans)</option>
+                <option value="'Nunito', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Nunito (Sans)</option>
+                <option value="'Source Sans 3', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Source Sans 3 (Sans)</option>
+                <option value="'Ubuntu', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Ubuntu (Sans)</option>
+                <option value="'Noto Sans', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Noto Sans (Sans)</option>
+                <!-- 10 Handwriting -->
+                <option value="'Caveat', 'Comic Sans MS', cursive">Caveat (Handwriting)</option>
+                <option value="'Pacifico', 'Comic Sans MS', cursive">Pacifico (Handwriting)</option>
+                <option value="'Sacramento', 'Comic Sans MS', cursive">Sacramento (Handwriting)</option>
+                <option value="'Dancing Script', 'Comic Sans MS', cursive">Dancing Script (Handwriting)</option>
+                <option value="'Indie Flower', 'Comic Sans MS', cursive">Indie Flower (Handwriting)</option>
+                <option value="'Great Vibes', 'Comic Sans MS', cursive">Great Vibes (Handwriting)</option>
+                <option value="'Satisfy', 'Comic Sans MS', cursive">Satisfy (Handwriting)</option>
+                <option value="'Patrick Hand', 'Comic Sans MS', cursive">Patrick Hand (Handwriting)</option>
+                <option value="'Amatic SC', 'Comic Sans MS', cursive">Amatic SC (Handwriting)</option>
+                <option value="'Shadows Into Light', 'Comic Sans MS', cursive">Shadows Into Light (Handwriting)</option>
+              </select>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <label class="inline-flex items-center gap-1 mt-6"><input type="checkbox" id="bold"> Bold</label>
+              <label class="inline-flex items-center gap-1 mt-6"><input type="checkbox" id="italic"> Italic</label>
+              <label class="inline-flex items-center gap-1 mt-6"><input type="checkbox" id="underline"> Underline</label>
+              <select id="align" class="border rounded px-2 py-1 mt-5">
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block text-xs mb-1">Shadow strength</label>
+              <input type="range" id="shadowStrength" min="0" max="100" value="35" />
+            </div>
+            <div>
+              <label class="block text-xs mb-1">Shadow blur</label>
+              <input type="range" id="shadowBlur" min="0" max="30" value="10" />
+            </div>
+            <div>
+              <label class="block text-xs mb-1">Shadow color</label>
+              <input type="color" id="shadowColor" value="#000000" class="w-full h-[36px] border rounded" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Footer -->
+  <footer class="fixed bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div class="text-xs md:text-sm text-slate-600" id="statusMsg">Ready. Pick a size & background, position your texts, then export.</div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btnWebPng"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Download Web PNG (1920px)</button>
+        <button id="btnPrintPng" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Download Print PNG (DPI)</button>
+        <button id="btnPrintPdf" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Download Print PDF (true inches)</button>
+      </div>
+    </div>
+  </footer>
+
+  <div id="printStage"></div>
+
+  <script>
+    // ---------- Fonts helper ----------
+    async function ensureFontsReady(){
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch(_){}
+      }
+    }
+
+    // ---------- Library (replace with your URLs as needed) ----------
+    const ASSET_LIBRARY = [
+      // 24×30
+      {
+        id:'lib-2430-1',
+        label:'24×30 – BG #1',
+        size:'24x30',
+        small:'https://kvw51688-max.github.io/v/assets/images-small/24-30-1.png',
+        large:'https://kvw51688-max.github.io/v/assets/images-small/24-30-1.png'
+      },
+      {
+        id:'lib-2430-2',
+        label:'24×30 – BG #2',
+        size:'24x30',
+        small:'https://kvw51688-max.github.io/v/assets/images-small/24-30-2.png',
+        large:'https://kvw51688-max.github.io/v/assets/images-small/24-30-2.png'
+      },
+      // 24×50
+      {
+        id:'lib-2450-1',
+        label:'24×50 – BG #1',
+        size:'24x50',
+        small:'https://kvw51688-max.github.io/v/assets/images-small/24-50-1.png',
+        large:'https://kvw51688-max.github.io/v/assets/images-small/24-50-1.png'
+      },
+      {
+        id:'lib-2450-2',
+        label:'24×50 – BG #2',
+        size:'24x50',
+        small:'https://kvw51688-max.github.io/v/assets/images-small/24-50-2.png',
+        large:'https://kvw51688-max.github.io/v/assets/images-small/24-50-2.png'
+      }
+    ];
+
+    // ---------- State ----------
+    const state = {
+      size:'24x30',
+      dpi:300,
+      preview:{
+        width:1920, height:2400,
+        bgSmall:'https://kvw51688-max.github.io/v/assets/images-small/24-30-1.png',
+        bgLarge:'https://kvw51688-max.github.io/v/assets/images-small/24-30-1.png',
+        isLocal:false
+      },
+      inches:{w:24, h:30},
+      activeTextId:'t1',
+      activeThumbId:null
+    };
+
+    // ---------- Elements ----------
+    const previewStage=document.getElementById('previewStage');
+    const previewBg   =document.getElementById('previewBg');
+    const printStage  =document.getElementById('printStage');
+
+    const t1=document.getElementById('t1');
+    const t2=document.getElementById('t2');
+    const t3=document.getElementById('t3');
+    const texts={t1,t2,t3};
+
+    const sizeSelect  =document.getElementById('sizeSelect');
+    const dpiSelect   =document.getElementById('dpiSelect');
+    const guideSelect =document.getElementById('guideSelect');
+    const specInfo    =document.getElementById('specInfo');
+    const statusMsg   =document.getElementById('statusMsg');
+
+    const textContent =document.getElementById('textContent');
+    const fontSize    =document.getElementById('fontSize');
+    const fontColor   =document.getElementById('fontColor');
+    const bold        =document.getElementById('bold');
+    const italic      =document.getElementById('italic');
+    const underline   =document.getElementById('underline');
+    const align       =document.getElementById('align');
+    const fontFamily  =document.getElementById('fontFamily');
+
+    const shadowStrength=document.getElementById('shadowStrength');
+    const shadowBlur    =document.getElementById('shadowBlur');
+    const shadowColor   =document.getElementById('shadowColor');
+
+    const guideH=document.getElementById('guideH');
+    const guideV=document.getElementById('guideV');
+
+    const btnWebPng =document.getElementById('btnWebPng');
+    const btnPrintPng=document.getElementById('btnPrintPng');
+    const btnPrintPdf=document.getElementById('btnPrintPdf');
+
+    const resetBg=document.getElementById('resetBg');
+
+    const bgUpload =document.getElementById('bgUpload');
+    const thumbStrip=document.getElementById('thumbStrip');
+    const thumbPrev =document.getElementById('thumbPrev');
+    const thumbNext =document.getElementById('thumbNext');
+
+    // ---------- Text target picker ----------
+    for(const el of document.querySelectorAll('.pickTarget')){
+      el.addEventListener('click',()=>{
+        state.activeTextId=el.dataset.target;
+        loadTextEditorFrom(state.activeTextId);
+      });
+    }
+
+    // ---------- Size / DPI ----------
+    function setSize(v){
+      state.size=v;
+      if(v==='24x30'){
+        state.preview.height=2400;
+        state.inches={w:24,h:30};
+        if(!state.preview.isLocal){
+          state.preview.bgSmall='https://kvw51688-max.github.io/v/assets/images-small/24-30-1.png';
+          state.preview.bgLarge='https://kvw51688-max.github.io/v/assets/images-small/24-30-1.png';
+          state.activeThumbId=null;
+        }
+        previewStage.style.aspectRatio='4 / 5';
+      }else{
+        state.preview.height=4000;
+        state.inches={w:24,h:50};
+        if(!state.preview.isLocal){
+          state.preview.bgSmall='https://kvw51688-max.github.io/v/assets/images-small/24-50-1.png';
+          state.preview.bgLarge='https://kvw51688-max.github.io/v/assets/images-small/24-50-1.png';
+          state.activeThumbId=null;
+        }
+        previewStage.style.aspectRatio='24 / 50';
+      }
+      applyPreviewBg();
+      updateSpecInfo();
+      buildThumbs();
+    }
+
+    function setDpi(v){
+      state.dpi=parseInt(v,10);
+      updateSpecInfo();
+      warnIfLocalTooSmall();
+    }
+
+    // ---------- Spec / Preview ----------
+    function updateSpecInfo(){
+      const {w,h}=state.inches;
+      const pw=state.preview.width, ph=state.preview.height;
+      const printWpx=Math.round(w*state.dpi), printHpx=Math.round(h*state.dpi);
+      specInfo.innerHTML = `<b>Spec:</b> Preview ${pw}×${ph} px • Print ${w}×${h} in @ ${state.dpi} dpi → <b>${printWpx}×${printHpx} px</b>`;
+    }
+
+    function applyPreviewBg(){
+      const url=state.preview.bgSmall;
+      previewBg.style.backgroundImage = url ? `url('${url}')` : 'none';
+      if(!url) previewBg.style.background = 'repeating-linear-gradient(45deg,#eee,#eee 10px,#fafafa 10px,#fafafa 20px)';
+    }
+
+    sizeSelect.addEventListener('change',e=>setSize(e.target.value));
+    dpiSelect.addEventListener('change',e=>setDpi(e.target.value));
+    guideSelect.addEventListener('change',e=>{
+      const on=e.target.value==='on';
+      guideH.classList.toggle('hidden',!on);
+      guideV.classList.toggle('hidden',!on);
+    });
+
+    // ---------- Library builder ----------
+    function buildThumbs(){
+      thumbStrip.innerHTML='';
+      const items=ASSET_LIBRARY.filter(i=>i.size===state.size);
+      const locals=loadLocalThumbs(state.size);
+      const all=[...locals,...items];
+
+      all.forEach(item=>{
+        const btn=document.createElement('button');
+        btn.className='thumb rounded bg-slate-200 hover:opacity-90 transition';
+        btn.style.backgroundImage=`url('${item.small}')`;
+        btn.title=item.label||'Background';
+        btn.dataset.small=item.small;
+        btn.dataset.large=item.large||item.small;
+        btn.dataset.id=item.id;
+
+        if(state.activeThumbId && state.activeThumbId===item.id){ btn.classList.add('active'); }
+        btn.addEventListener('click',()=>{
+          state.preview.isLocal=item.isLocal||false;
+          state.preview.bgSmall=item.small;
+          state.preview.bgLarge=item.large||item.small;
+          state.activeThumbId=item.id||null;
+          for(const n of thumbStrip.querySelectorAll('.thumb')) n.classList.remove('active');
+          btn.classList.add('active');
+          applyPreviewBg();
+          warnIfLocalTooSmall();
+          status(item.isLocal?'Local background selected.':'Background set from repository assets.');
+        });
+
+        thumbStrip.appendChild(btn);
+      });
+
+      setTimeout(()=>{
+        const overflow = thumbStrip.scrollWidth > thumbStrip.clientWidth + 4;
+        thumbPrev.classList.toggle('hidden',!overflow);
+        thumbNext.classList.toggle('hidden',!overflow);
+      },0);
+    }
+
+    function loadLocalThumbs(size){
+      const key=`localThumbs_${size}`;
+      try{ return JSON.parse(sessionStorage.getItem(key)||'[]'); }catch{ return []; }
+    }
+    function saveLocalThumb(size,item){
+      const key=`localThumbs_${size}`;
+      const arr=loadLocalThumbs(size);
+      if(!arr.some(i=>i.small===item.small)){
+        arr.unshift(item);
+        sessionStorage.setItem(key, JSON.stringify(arr.slice(0,30)));
+      }
+    }
+
+    thumbPrev.addEventListener('click',()=>{ thumbStrip.scrollBy({left:-thumbStrip.clientWidth,behavior:'smooth'});});
+    thumbNext.addEventListener('click',()=>{ thumbStrip.scrollBy({left: thumbStrip.clientWidth,behavior:'smooth'});});
+
+    // ---------- Local upload ----------
+    bgUpload.addEventListener('change', async(e)=>{
+      const file=e.target.files?.[0]; if(!file) return;
+      const dataUrl=await readFileAsDataURL(file);
+      const img=new Image();
+      img.onload=()=>{
+        const item={
+          id:`local-${Date.now()}`, label:`${state.size} – Local upload`,
+          size:state.size, small:dataUrl, large:dataUrl, isLocal:true,
+          naturalW:img.naturalWidth, naturalH:img.naturalHeight
+        };
+        state.preview.isLocal=true;
+        state.preview.bgSmall=item.small;
+        state.preview.bgLarge=item.large;
+        state.activeThumbId=item.id;
+        applyPreviewBg();
+        saveLocalThumb(state.size,item);
+        buildThumbs();
+        warnIfLocalTooSmall(img.naturalWidth,img.naturalHeight);
+        status('Local background uploaded and added to the library.');
+        bgUpload.value='';
+      };
+      img.src=dataUrl;
+    });
+
+    async function readFileAsDataURL(file){
+      return new Promise((resolve,reject)=>{
+        const fr=new FileReader();
+        fr.onload=()=>resolve(fr.result);
+        fr.onerror=reject;
+        fr.readAsDataURL(file);
+      });
+    }
+
+    // ---------- Text editor <-> preview ----------
+    function loadTextEditorFrom(id){
+      const el=texts[id];
+      textContent.value=el.innerText;
+      const cs=getComputedStyle(el);
+      fontSize.value=parseInt(cs.fontSize,10);
+      fontColor.value=rgbToHex(cs.color);
+
+      const fam=cs.fontFamily;
+      const opts=Array.from(fontFamily.options);
+      const found=opts.find(o=>fam.toLowerCase().includes(o.value.split(',')[0].replace(/['"]/g,'').toLowerCase()));
+      if(found) fontFamily.value=found.value;
+
+      bold.checked=cs.fontWeight==='700'||parseInt(cs.fontWeight,10)>=600;
+      italic.checked=cs.fontStyle==='italic';
+      underline.checked=(cs.textDecorationLine||'').includes('underline');
+      align.value=cs.textAlign||'left';
+
+      const shadow=cs.textShadow||'';
+      const m=shadow.match(/(-?\d+\.?\d*)px\s+(-?\d+\.?\d*)px\s+(\d+\.?\d*)px\s+(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8})/);
+      if(m){
+        shadowStrength.value=Math.min(100, Math.round(Math.hypot(parseFloat(m[1]),parseFloat(m[2]))));
+        shadowBlur.value=parseInt(m[3],10);
+        shadowColor.value=cssColorToHex(m[4]);
+      }else{
+        shadowStrength.value=35; shadowBlur.value=10; shadowColor.value='#000000';
+      }
+    }
+
+    function applyEditorTo(id){
+      const el=texts[id];
+      el.innerText=textContent.value;
+      el.style.fontSize=`${parseInt(fontSize.value,10)}px`;
+      el.style.color=fontColor.value;
+      el.style.fontWeight=bold.checked?'700':'400';
+      el.style.fontStyle=italic.checked?'italic':'normal';
+      el.style.textDecoration=underline.checked?'underline':'none';
+      el.style.textAlign=align.value;
+      el.style.fontFamily=fontFamily.value;
+
+      const s=parseInt(shadowStrength.value,10);
+      const blur=parseInt(shadowBlur.value,10);
+      const off=Math.round(s/10);
+      el.style.textShadow = s===0 ? 'none' : `${off}px ${off}px ${blur}px ${shadowColor.value}`;
+    }
+
+    textContent.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
+    fontSize.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
+    fontColor.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
+    bold.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
+    italic.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
+    underline.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
+    align.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
+    fontFamily.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
+    shadowStrength.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
+    shadowBlur.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
+    shadowColor.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
+
+    // ---------- Drag ----------
+    for(const el of Object.values(texts)) makeDraggable(el,previewStage);
+    function makeDraggable(el,boundary){
+      let isDown=false; let startX=0,startY=0,startL=0,startT=0;
+      const down=e=>{
+        isDown=true;
+        const p=getPoint(e);
+        startX=p.x; startY=p.y;
+        const rect=el.getBoundingClientRect();
+        const brect=boundary.getBoundingClientRect();
+        startL=rect.left-brect.left; startT=rect.top-brect.top;
+        e.preventDefault();
+      };
+      const move=e=>{
+        if(!isDown) return;
+        const p=getPoint(e);
+        const dx=p.x-startX, dy=p.y-startY;
+        const brect=boundary.getBoundingClientRect();
+        const rect=el.getBoundingClientRect();
+        let left=startL+dx, top=startT+dy;
+        left=Math.max(0,Math.min(left,brect.width-rect.width));
+        top =Math.max(0,Math.min(top ,brect.height-rect.height));
+        el.style.left=`${left}px`; el.style.top=`${top}px`;
+      };
+      const up=()=>{ isDown=false; };
+      el.addEventListener('mousedown',down);
+      window.addEventListener('mousemove',move);
+      window.addEventListener('mouseup',up);
+      el.addEventListener('touchstart',down,{passive:false});
+      window.addEventListener('touchmove',move,{passive:false});
+      window.addEventListener('touchend',up);
+    }
+    function getPoint(e){ if(e.touches&&e.touches[0]) return {x:e.touches[0].clientX,y:e.touches[0].clientY}; return {x:e.clientX,y:e.clientY};}
+
+    // ---------- Export ----------
+    document.getElementById('btnWebPng').addEventListener('click', async()=>{
+      status('Generating web preview PNG…');
+      await ensureFontsReady();
+      const dataUrl=await renderPreviewPNG();
+      triggerDownload(dataUrl,`poster-web-${state.size}.png`);
+      status('Done.');
+    });
+
+    document.getElementById('btnPrintPng').addEventListener('click', async()=>{
+      try{
+        status(`Rendering print PNG (${state.dpi} dpi)…`);
+        await ensureFontsReady();
+        const dataUrl=await renderPrintPNG();
+        triggerDownload(dataUrl,`poster-print-${state.size}-${state.dpi}dpi.png`);
+        status('Done.');
+      }catch(err){ console.error(err); status('Failed: try 200 dpi or smaller background.'); }
+    });
+
+    document.getElementById('btnPrintPdf').addEventListener('click', async()=>{
+      try{
+        status(`Rendering print PDF (${state.dpi} dpi, true inches)…`);
+        await ensureFontsReady();
+        const canvas=await renderPrintCanvas();
+        const { jsPDF }=window.jspdf;
+        const wIn=state.inches.w, hIn=state.inches.h;
+        const pdf=new jsPDF({orientation:wIn>hIn?'l':'p', unit:'in', format:[wIn,hIn]});
+        const imgData=canvas.toDataURL('image/jpeg',1);
+        pdf.addImage(imgData,'JPEG',0,0,wIn,hIn);
+        pdf.save(`poster-print-${state.size}-${state.dpi}dpi.pdf`);
+        status('Done.');
+      }catch(err){ console.error(err); status('Failed: try 200 dpi or smaller background.'); }
+    });
+
+    async function renderPreviewPNG(){
+      const canvas=await html2canvas(previewStage,{allowTaint:false,useCORS:true,backgroundColor:'#ffffff',scale:1});
+      return canvas.toDataURL('image/png');
+    }
+    async function renderPrintPNG(){ const canvas=await renderPrintCanvas(); return canvas.toDataURL('image/png'); }
+
+    async function renderPrintCanvas(){
+      const {w,h}=state.inches; const dpi=state.dpi;
+      const W=Math.round(w*dpi), H=Math.round(h*dpi);
+
+      printStage.innerHTML=''; printStage.style.width=W+'px'; printStage.style.height=H+'px';
+
+      const bgUrl=state.preview.bgLarge||state.preview.bgSmall;
+
+      const bg=document.createElement('div');
+      bg.style.cssText=`width:100%;height:100%;position:relative;background:#ffffff url('${bgUrl}') center/cover no-repeat;`;
+      printStage.appendChild(bg);
+
+      // --- map texts (no fixed width to avoid unexpected wrapping) ---
+      const pr=previewStage.getBoundingClientRect();
+      const sx=W/pr.width, sy=H/pr.height;
+      const k=(sx+sy)/2;
+
+      for(const id of ['t1','t2','t3']){
+        const src=texts[id];
+        const srec=src.getBoundingClientRect();
+        const cs=getComputedStyle(src);
+
+        const el=document.createElement('div');
+        el.textContent=src.textContent;
+
+        // position
+        el.style.position='absolute';
+        el.style.left=((srec.left-pr.left)*sx)+'px';
+        el.style.top =((srec.top -pr.top )*sy)+'px';
+
+        // no fixed width: let content decide (prevents export wrapping)
+        // el.style.width = Math.round(srec.width*sx)+'px';
+
+        // typography
+        const fontPx=parseFloat(cs.fontSize)*k;
+        el.style.fontSize=fontPx+'px';
+        el.style.fontFamily=cs.fontFamily;
+        el.style.color=cs.color;
+        el.style.fontWeight=cs.fontWeight;
+        el.style.fontStyle=cs.fontStyle;
+        el.style.textDecoration=cs.textDecoration;
+        el.style.textAlign=cs.textAlign;
+
+        el.style.whiteSpace=cs.whiteSpace||'pre-wrap';
+        el.style.lineHeight=(cs.lineHeight==='normal'?'1.15':cs.lineHeight);
+
+        if(cs.letterSpacing && cs.letterSpacing.endsWith('px')){
+          el.style.letterSpacing=(parseFloat(cs.letterSpacing)*k)+'px';
+        }
+
+        const m=(cs.textShadow||'').match(/(-?\d+\.?\d*)px\s+(-?\d+\.?\d*)px\s+(\d+\.?\d*)px\s+(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8})/);
+        if(m){
+          const ox=parseFloat(m[1])*k, oy=parseFloat(m[2])*k, blur=parseFloat(m[3])*k;
+          el.style.textShadow=`${ox}px ${oy}px ${blur}px ${m[4]}`;
+        }
+
+        el.style.display='inline-block';
+        el.style.maxWidth='none';
+        el.style.overflow='visible';
+
+        bg.appendChild(el);
+      }
+
+      const canvas=await html2canvas(printStage,{
+        allowTaint:false,useCORS:true,backgroundColor:'#ffffff',scale:1,windowWidth:W,windowHeight:H
+      });
+      return canvas;
+    }
+
+    // ---------- Helpers ----------
+    function triggerDownload(dataUrl,filename){
+      const a=document.createElement('a'); a.href=dataUrl; a.download=filename;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+    function rgbToHex(rgb){
+      const m=rgb.match(/\d+/g); if(!m) return '#000000';
+      const [r,g,b]=m.map(Number);
+      return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+    }
+    function cssColorToHex(c){ if(c.startsWith('#')) return c; return rgbToHex(getComputedStyle(Object.assign(document.createElement('div'),{style:{color:c}})).color); }
+    function status(msg){ statusMsg.textContent=msg; }
+
+    function warnIfLocalTooSmall(nw,nh){
+      if(state.preview.isLocal && (!nw||!nh)){
+        const img=new Image();
+        img.onload=()=>warnIfLocalTooSmall(img.naturalWidth,img.naturalHeight);
+        img.src=state.preview.bgLarge||state.preview.bgSmall;
+        return;
+      }
+      if(!nw||!nh) return;
+      const needW=state.inches.w*state.dpi, needH=state.inches.h*state.dpi;
+      if(nw<needW*0.98 || nh<needH*0.98){
+        status(`Warning: local background may be too small for ${state.inches.w}×${state.inches.h} in @ ${state.dpi} dpi (need ~${needW}×${needH}px, got ${nw}×${nh}px). It will be upscaled.`);
+      }
+    }
+
+    // ---------- First render ----------
+    t1.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+    t2.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+    t3.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+
+    setSize('24x30');
+    setDpi(dpiSelect.value);
+    applyPreviewBg();
+    buildThumbs();
+    loadTextEditorFrom(state.activeTextId);
+    status('Ready. Choose a background from the library or upload locally.');
+
+    if(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)){
+      status('On mobile: exporting large 300 dpi images may be heavy. 200 dpi is recommended.');
+    }
+  </script>
+</body>
+</html>
