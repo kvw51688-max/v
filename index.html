@@ -12,7 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
-  <!-- Google Fonts: 20 families (sans + handwriting) -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto:wght@400;700&family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Poppins:wght@400;700&family=Nunito:wght@400;700&family=Source+Sans+3:wght@400;700&family=Ubuntu:wght@400;700&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Pacifico&family=Sacramento&family=Dancing+Script:wght@400;700&family=Indie+Flower&family=Great+Vibes&family=Satisfy&family=Patrick+Hand&family=Amatic+SC:wght@400;700&family=Shadows+Into+Light&display=swap" rel="stylesheet">
@@ -60,7 +60,7 @@
         <div class="guide hidden" id="guideH"></div>
         <div class="guide v hidden" id="guideV"></div>
 
-        <!-- Draggable texts -->
+        <!-- Draggable texts (初始用百分比定位) -->
         <div id="t1" class="draggable text-3xl font-bold" style="left:10%; top:10%;">MAIN TITLE</div>
         <div id="t2" class="draggable text-xl" style="left:10%; top:25%;">Subtitle goes here</div>
         <div id="t3" class="draggable text-base" style="left:10%; top:40%;">Description or notes</div>
@@ -266,8 +266,9 @@
       dpi:300,
       preview:{
         width:1920, height:2400,
-        bgSmall:'https://kvw51688-max.github.io/v/24-30-1.webp',
-        bgLarge:'https://kvw51688-max.github.io/v/24-50-1.webp',
+        // 默认 small/large 统一为 24×30 系，避免首屏错配
+        bgSmall:'https://kvw51688-max.github.io/v/24-30-1.png',
+        bgLarge:'https://kvw51688-max.github.io/v/24-30-1.webp',
         isLocal:false
       },
       inches:{w:24, h:30},
@@ -333,8 +334,8 @@
         state.preview.height=2400;
         state.inches={w:24,h:30};
         if(!state.preview.isLocal){
-          state.preview.bgSmall='https://kvw51688-max.github.io/v/assets/images-small/24-30-1.png';
-          state.preview.bgLarge='https://kvw51688-max.github.io/v/assets/images-small/24-30-1.png';
+          state.preview.bgSmall='https://kvw51688-max.github.io/v/24-30-1.png';
+          state.preview.bgLarge='https://kvw51688-max.github.io/v/24-30-1.webp';
           state.activeThumbId=null;
         }
         previewStage.style.aspectRatio='4 / 5';
@@ -342,8 +343,8 @@
         state.preview.height=4000;
         state.inches={w:24,h:50};
         if(!state.preview.isLocal){
-          state.preview.bgSmall='https://kvw51688-max.github.io/v/assets/images-small/24-50-1.png';
-          state.preview.bgLarge='https://kvw51688-max.github.io/v/assets/images-small/24-50-1.png';
+          state.preview.bgSmall='https://kvw51688-max.github.io/v/24-50-1.png';
+          state.preview.bgLarge='https://kvw51688-max.github.io/v/24-50-1.webp';
           state.activeThumbId=null;
         }
         previewStage.style.aspectRatio='24 / 50';
@@ -351,6 +352,9 @@
       applyPreviewBg();
       updateSpecInfo();
       buildThumbs();
+
+      // 切换尺寸后做一次“回夹”，避免因元素尺寸变化导致百分比越界
+      clampPositionsToStage();
     }
 
     function setDpi(v){
@@ -386,7 +390,7 @@
       thumbStrip.innerHTML='';
       const items=ASSET_LIBRARY.filter(i=>i.size===state.size);
       const locals=loadLocalThumbs(state.size);
-      const all=[...locals,...items];
+      const all=[...locals, ...items]; // 修正：扩展运算符合并
 
       all.forEach(item=>{
         const btn=document.createElement('button');
@@ -528,31 +532,58 @@
     shadowBlur.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
     shadowColor.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
 
-    // ---------- Drag ----------
+    // ---------- Drag (百分比定位) ----------
     for(const el of Object.values(texts)) makeDraggable(el,previewStage);
+
     function makeDraggable(el,boundary){
-      let isDown=false; let startX=0,startY=0,startL=0,startT=0;
+      // 初次规范化：将现有 left/top（可能是%或px）转为百分比
+      normalizePercentPosition(el, boundary);
+
+      let isDown=false; let startX=0,startY=0;
+      let startLeftPx=0, startTopPx=0;
+
       const down=e=>{
         isDown=true;
         const p=getPoint(e);
         startX=p.x; startY=p.y;
-        const rect=el.getBoundingClientRect();
+
+        // 将当前百分比换算成 px 作为拖拽起点
         const brect=boundary.getBoundingClientRect();
-        startL=rect.left-brect.left; startT=rect.top-brect.top;
+        const {leftPercent, topPercent} = getInlineLeftTop(el, brect);
+        startLeftPx = leftPercent * brect.width / 100;
+        startTopPx  = topPercent  * brect.height/ 100;
+
         e.preventDefault();
       };
+
       const move=e=>{
         if(!isDown) return;
         const p=getPoint(e);
         const dx=p.x-startX, dy=p.y-startY;
         const brect=boundary.getBoundingClientRect();
         const rect=el.getBoundingClientRect();
-        let left=startL+dx, top=startT+dy;
-        left=Math.max(0,Math.min(left,brect.width-rect.width));
-        top =Math.max(0,Math.min(top ,brect.height-rect.height));
-        el.style.left=`${left}px`; el.style.top=`${top}px`;
+
+        let leftPx = startLeftPx + dx;
+        let topPx  = startTopPx  + dy;
+
+        // 限制不超出容器
+        leftPx=Math.max(0,Math.min(leftPx,brect.width -rect.width));
+        topPx =Math.max(0,Math.min(topPx ,brect.height-rect.height));
+
+        // 写入百分比
+        const leftPercent = (leftPx / brect.width) * 100;
+        const topPercent  = (topPx  / brect.height)* 100;
+
+        el.style.left = `${leftPercent}%`;
+        el.style.top  = `${topPercent}%`;
+
+        // 同步数据属性（可选，用于调试或保存）
+        el.dataset.leftPercent = leftPercent.toFixed(6);
+        el.dataset.topPercent  = topPercent.toFixed(6);
       };
+
       const up=()=>{ isDown=false; };
+
       el.addEventListener('mousedown',down);
       window.addEventListener('mousemove',move);
       window.addEventListener('mouseup',up);
@@ -560,6 +591,73 @@
       window.addEventListener('touchmove',move,{passive:false});
       window.addEventListener('touchend',up);
     }
+
+    function normalizePercentPosition(el, boundary){
+      const brect=boundary.getBoundingClientRect();
+      let lp = parsePercent(el.style.left);
+      let tp = parsePercent(el.style.top);
+
+      // 如果不是百分比（NaN），用像素换算
+      if(Number.isNaN(lp) || Number.isNaN(tp)){
+        const rect=el.getBoundingClientRect();
+        const leftPx = rect.left - brect.left;
+        const topPx  = rect.top  - brect.top;
+        lp = (leftPx / brect.width) * 100;
+        tp = (topPx  / brect.height)* 100;
+      }
+
+      el.style.left = `${lp}%`;
+      el.style.top  = `${tp}%`;
+      el.dataset.leftPercent = lp.toFixed(6);
+      el.dataset.topPercent  = tp.toFixed(6);
+    }
+
+    function parsePercent(v){
+      if(!v) return NaN;
+      if(String(v).trim().endsWith('%')) return parseFloat(v);
+      return NaN;
+    }
+
+    function getInlineLeftTop(el, brect){
+      let lp = parsePercent(el.style.left);
+      let tp = parsePercent(el.style.top);
+      if(Number.isNaN(lp) || Number.isNaN(tp)){
+        const rect=el.getBoundingClientRect();
+        const leftPx = rect.left - brect.left;
+        const topPx  = rect.top  - brect.top;
+        lp = (leftPx / brect.width) * 100;
+        tp = (topPx  / brect.height)* 100;
+      }
+      return { leftPercent: lp, topPercent: tp };
+    }
+
+    function clampPositionsToStage(){
+      const brect=previewStage.getBoundingClientRect();
+      for(const el of Object.values(texts)){
+        const rect=el.getBoundingClientRect();
+
+        // 当前百分比
+        let lp = parsePercent(el.style.left);
+        let tp = parsePercent(el.style.top);
+        if(Number.isNaN(lp) || Number.isNaN(tp)){
+          const {leftPercent, topPercent} = getInlineLeftTop(el, brect);
+          lp = leftPercent; tp = topPercent;
+        }
+
+        // 可放置的最大百分比（考虑元素自身宽高）
+        const maxLeftP = Math.max(0, (brect.width  - rect.width ) / brect.width  * 100);
+        const maxTopP  = Math.max(0, (brect.height - rect.height) / brect.height * 100);
+
+        lp = Math.min(Math.max(lp, 0), maxLeftP);
+        tp = Math.min(Math.max(tp, 0), maxTopP);
+
+        el.style.left = `${lp}%`;
+        el.style.top  = `${tp}%`;
+        el.dataset.leftPercent = lp.toFixed(6);
+        el.dataset.topPercent  = tp.toFixed(6);
+      }
+    }
+
     function getPoint(e){ if(e.touches&&e.touches[0]) return {x:e.touches[0].clientX,y:e.touches[0].clientY}; return {x:e.clientX,y:e.clientY};}
 
     // ---------- Export ----------
@@ -614,7 +712,7 @@
       bg.style.cssText=`width:100%;height:100%;position:relative;background:#ffffff url('${bgUrl}') center/cover no-repeat;`;
       printStage.appendChild(bg);
 
-      // --- map texts (no fixed width to avoid unexpected wrapping) ---
+      // --- map texts ---
       const pr=previewStage.getBoundingClientRect();
       const sx=W/pr.width, sy=H/pr.height;
       const k=(sx+sy)/2;
@@ -627,15 +725,12 @@
         const el=document.createElement('div');
         el.textContent=src.textContent;
 
-        // position
+        // 位置（基于可视 rect 相对 previewStage）
         el.style.position='absolute';
         el.style.left=((srec.left-pr.left)*sx)+'px';
         el.style.top =((srec.top -pr.top )*sy)+'px';
 
-        // no fixed width: let content decide (prevents export wrapping)
-        // el.style.width = Math.round(srec.width*sx)+'px';
-
-        // typography
+        // 字体
         const fontPx=parseFloat(cs.fontSize)*k;
         el.style.fontSize=fontPx+'px';
         el.style.fontFamily=cs.fontFamily;
@@ -703,6 +798,11 @@
     t2.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
     t3.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
 
+    // 初始化：规范化百分比定位
+    normalizePercentPosition(t1, previewStage);
+    normalizePercentPosition(t2, previewStage);
+    normalizePercentPosition(t3, previewStage);
+
     setSize('24x30');
     setDpi(dpiSelect.value);
     applyPreviewBg();
@@ -716,4 +816,3 @@
   </script>
 </body>
 </html>
-
