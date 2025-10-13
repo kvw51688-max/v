@@ -299,26 +299,26 @@
     // ---------- Default backgrounds for each size ----------
     const DEFAULT_BG = {
       '24x30': {
-        small: 'https://kvw51688-max.github.io/v/24-30-1.webp',
-        large: 'https://kvw51688-max.github.io/v/24-30-1.png'
+        small: 'https://kvw51688-max.github.io/v/24-30-1.png',
+        large: 'https://kvw51688-max.github.io/v/24-30-1.webp'
       },
       '24x50': {
-        small: 'https://kvw51688-max.github.io/v/24-50-1.webp',
-        large: 'https://kvw51688-max.github.io/v/24-50-1.png'
+        small: 'https://kvw51688-max.github.io/v/24-50-1.png',
+        large: 'https://kvw51688-max.github.io/v/24-50-1.webp'
       }
     };
 
     // ---------- Library ----------
     const ASSET_LIBRARY = [
       { id:'lib-2430-1', label:'24×30 – BG #1', size:'24x30',
-        small:'https://kvw51688-max.github.io/v/24-30-1.webp',
-        large:'https://kvw51688-max.github.io/v/24-30-1.png' },
+        small:'https://kvw51688-max.github.io/v/24-30-1.png',
+        large:'https://kvw51688-max.github.io/v/24-30-1.webp' },
       { id:'lib-2430-2', label:'24×30 – BG #2', size:'24x30',
         small:'https://kvw51688-max.github.io/v/assets/images-small/24-30-2.png',
         large:'https://kvw51688-max.github.io/v/assets/images-small/24-30-2.png' },
       { id:'lib-2450-1', label:'24×50 – BG #1', size:'24x50',
-        small:'https://kvw51688-max.github.io/v/24-50-1.webp',
-        large:'https://kvw51688-max.github.io/v/24-50-1.png' },
+        small:'https://kvw51688-max.github.io/v/24-50-1.png',
+        large:'https://kvw51688-max.github.io/v/24-50-1.webp' },
       { id:'lib-2450-2', label:'24×50 – BG #2', size:'24x50',
         small:'https://kvw51688-max.github.io/v/assets/images-small/24-50-2.png',
         large:'https://kvw51688-max.github.io/v/assets/images-small/24-50-2.png' }
@@ -342,7 +342,7 @@
       activeThumbId:null,
       inlineEditing:null,
       picks: { '24x30': null, '24x50': null },
-      pageIndex: { '24x30': 0, '24x50': 0 } // 记住各尺寸的页码
+      pageIndex: { '24x30': 0, '24x50': 0 }
     };
 
     // ---------- Elements ----------
@@ -511,7 +511,7 @@
       state.inlineEditing = el.id;
       el.classList.add('editing');
       try{ el.setAttribute('contenteditable', 'plaintext-only'); }catch(_){ el.setAttribute('contenteditable', 'true'); }
-      // 可选：移动端进入编辑时锁滚动，避免键盘顶起导致误触
+      // 移动端进入编辑时锁滚动
       if(isMobileDevice()) lockScroll();
       el.focus(); placeCaretAtEnd(el);
       status('Inline editing… Press Esc or tap outside to finish.');
@@ -580,9 +580,8 @@
       applyPreviewBg();
       updateSpecInfo();
 
-      // 若首次进入该尺寸，重置为第 0 页；否则保留原页码
       if(state.pageIndex[v] == null) state.pageIndex[v] = 0;
-      buildThumbs(); // 会用 state.pageIndex[v]
+      buildThumbs();
       clampPositionsToStage();
     }
 
@@ -692,7 +691,7 @@
         img.className = 'thumb-img';
         img.setAttribute('loading','lazy');
         img.setAttribute('alt', item.label || 'background');
-        img.setAttribute('data-src', item.small); // 真正的 src 由 IO 设置
+        img.setAttribute('data-src', item.small);
         btn.appendChild(img);
 
         _io.observe(img);
@@ -744,7 +743,7 @@
       state.pageIndex[state.size]=totalPages-1; buildThumbs();
     });
 
-    // ---------- Local upload (一次一张) ----------
+    // ---------- Local upload ----------
     bgUpload.addEventListener('change', async(e)=>{
       const file=e.target.files?.[0]; if(!file) return;
       const dataUrl=await readFileAsDataURL(file);
@@ -772,7 +771,6 @@
         applyPreviewBg();
         saveLocalThumb(state.size,item);
 
-        // 将页码跳到最新（第 0 位插入，仍在第一页）
         state.pageIndex[state.size] = 0;
         buildThumbs();
         warnIfLocalTooSmall(img.naturalWidth,img.naturalHeight);
@@ -840,6 +838,10 @@
       const blur=parseInt(shadowBlur.value,10);
       const off=Math.round(s/10);
       el.style.textShadow = s===0 ? 'none' : `${off}px ${off}px ${blur}px ${shadowColor.value}`;
+      // store shadow params for export
+      el.dataset.shadowS = String(s);
+      el.dataset.shadowBlur = String(blur);
+      el.dataset.shadowColor = shadowColor.value;
     }
 
     textContent.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
@@ -1007,7 +1009,7 @@
       status('Done.');
     }));
 
-    // >>> 关键修复：忽略辅助线元素，避免导出的 Web PNG 带线 <<<
+    // >>> 忽略辅助线元素，避免导出的 Web PNG 带线 <<<
     async function renderPreviewPNG(){
       lockScroll();
       try{
@@ -1044,7 +1046,7 @@
 
         const bgUrl=state.preview.bgLarge||state.preview.bgSmall;
         const wrap=document.createElement('div');
-        wrap.style.cssText=`position:relative;width:${W}px;height:${H}px;overflow:hidden;background:#ffffff;`;
+        wrap.style.cssText=`position:relative;width:${W}px;height:${H}px;overflow:visible;background:#ffffff;`;
         const img=document.createElement('img');
         img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
         img.crossOrigin='anonymous';
@@ -1085,13 +1087,29 @@
             el.style.letterSpacing=(parseFloat(cs.letterSpacing)*k)+'px';
           }
 
-          const m=(cs.textShadow||'').match(/(-?\d+\.?\d*)px\s+(-?\d+\.?\d*)px\s+(\d+\.?\d*)px\s+(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8})/);
-          if(m){
-            const ox=parseFloat(m[1])*k, oy=parseFloat(m[2])*k, blur=parseFloat(m[3])*k;
-            el.style.textShadow=`${ox}px ${oy}px ${blur}px ${m[4]}`;
+          
+          // Apply text shadow: prefer dataset parameters, fallback to parsing computed style
+          let sds = parseInt(src.dataset.shadowS || '0', 10);
+          let sblur = parseFloat(src.dataset.shadowBlur || '0');
+          let scolor = src.dataset.shadowColor || '';
+          if(!(sds>0) && cs.textShadow){
+            const mm = (cs.textShadow||'').match(/(-?\d+(?:\.\d*)?)px\s+(-?\d+(?:\.\d*)?)px\s+(\d+(?:\.\d*)?)px\s+(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8}|[a-zA-Z]+)/);
+            if(mm){
+              const ox = parseFloat(mm[1]);
+              const oy = parseFloat(mm[2]);
+              sds = Math.round(Math.hypot(ox, oy));
+              sblur = parseFloat(mm[3]);
+              scolor = mm[4];
+            }
           }
-
-          el.style.display='inline-block';
+          if(sds>0){
+            const off = Math.max(1, Math.round(sds/10)) * k;
+            const bl  = Math.max(0.5, sblur * k);
+            el.style.textShadow = `${off}px ${off}px ${bl}px ${scolor || '#000'}`;
+          } else {
+            el.style.textShadow = 'none';
+          }
+el.style.display='inline-block';
           el.style.maxWidth='none';
           el.style.overflow='visible';
 
@@ -1100,8 +1118,9 @@
 
         printStage.appendChild(wrap);
 
+        await (document.fonts && document.fonts.ready);
         const canvas=await html2canvas(wrap,{
-          allowTaint:false,useCORS:true,backgroundColor:'#ffffff',scale:1,windowWidth:W,windowHeight:H
+          allowTaint:false,useCORS:true,backgroundColor:'#ffffff',scale:1,windowWidth:W,windowHeight:H,letterRendering:true
         });
         return canvas;
       } finally { unlockScroll(); }
@@ -1247,36 +1266,37 @@
       statusMsgEnh('Inline editing finished.');
     }
 
+    // >>> 修复：新窗口打开图片使用 Blob + 先开空白页，占住弹窗权限 <<<
     async function openImageInNewTab(){
-      statusMsgEnh('Rendering image...');
-      if (typeof window.exportPosterToDataURL === 'function'){
-        try{
-          var url = await Promise.resolve(window.exportPosterToDataURL());
-          if(url){
-            window.open(url, '_blank');
-            statusMsgEnh('Opened image in a new tab.');
-            return;
-          }
-        }catch(e){ console.warn(e); }
-      }
-      var root = document.querySelector('#exportRoot, #poster, #canvasRoot, .poster, main');
-      if(!root){
-        statusMsgEnh('Export root not found.');
-        return;
-      }
+      // 1) 先同步开空白页，避免被拦截
+      const win = window.open('', '_blank');
+      if(!win){ alert('Popup blocked. Please allow popups for this site.'); return; }
+      win.document.write('<!doctype html><title>Preview</title><style>body{margin:0;font:14px system-ui} .msg{padding:16px;color:#334155}</style><div class="msg">Rendering…</div>');
+
       try{
-        if(!window.html2canvas){
-          alert('html2canvas not found. Please ensure the library is loaded.');
-          statusMsgEnh('html2canvas missing.');
+        // 2) 选择一个可见根节点；若没有 exportRoot，就退回到 previewStage/main
+        const root = document.querySelector('#exportRoot, #poster, #canvasRoot, .poster, #previewStage, main');
+        if(!root) throw new Error('Export root not found');
+
+        // 3) 渲染：用白底更稳（避免 iOS 空白）
+        const canvas = await window.html2canvas(root, { useCORS:true, backgroundColor:'#ffffff', scale:1 });
+
+        // 4) 用 Blob + blob:URL，而不是 dataURL
+        const blob = await new Promise(res => canvas.toBlob(b => res(b), 'image/png', 1));
+        if(!blob){
+          // 极端兜底
+          const fallback = canvas.toDataURL('image/png');
+          win.location.href = fallback;
+          win.document.title = 'Preview';
           return;
         }
-        var canvas = await window.html2canvas(root, {useCORS:true, backgroundColor:null});
-        var url = canvas.toDataURL('image/png');
-        window.open(url, '_blank');
-        statusMsgEnh('Opened image in a new tab.');
-      }catch(e){
-        console.error(e);
-        statusMsgEnh('Failed to render image.');
+        const url = URL.createObjectURL(blob);
+        win.document.body.innerHTML = `<img src="${url}" style="display:block;max-width:100%;height:auto;margin:0 auto;" alt="preview">`;
+        win.document.title = 'Preview';
+        win.document.querySelector('img').onload = () => URL.revokeObjectURL(url);
+      } catch (err){
+        console.error(err);
+        win.document.body.innerHTML = `<div class="msg">Failed to render image. Check CORS or try a smaller image / 200 DPI.</div>`;
       }
     }
 
@@ -1313,3 +1333,5 @@
   </script>
 </body>
 </html>
+
+
