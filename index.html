@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
-  <title>DIY Poster Creator – 24×30 / 24×50 in</title>
+  <title>DIY Poster Creator – 24×30 / 24×50 in (Mobile‑Stable)</title>
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -110,15 +110,12 @@ body{
 #actionBar.ab-hidden{ transform: translateY(110%); }
 </style>
 <style>
-
 :root{ --ab-h: 88px; } /* safer default for two-row footer on mobile */
 @media (min-width:1024px){
   :root{ --ab-h: 0px; } /* desktop won't need extra padding */
 }
-
 </style>
 <style>
-
 /* Mobile: make footer sticky to avoid overlay/duplication */
 @media (max-width:1023px){
   body.mobile-sticky-padding{ padding-bottom: 0 !important; }
@@ -129,7 +126,6 @@ body{
     transform: none !important; /* ensure visible */
   }
 }
-
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -185,6 +181,7 @@ body{
             <select id="dpiSelect" class="w-full border rounded px-3 py-2" aria-label="Choose print DPI">
               <option value="300" selected>300 dpi (print-ready)</option>
               <option value="200">200 dpi (lighter)</option>
+              <option value="150">150 dpi (mobile safe)</option>
             </select>
           </div>
           <div>
@@ -326,8 +323,7 @@ body{
     // ---------- Fonts helper ----------
     async function ensureFontsReady(){
       if (document.fonts && document.fonts.ready) {
-        try { await document.fonts.ready; } catch(_){}
-      }
+        try { await document.fonts.ready; } catch(_){}}
     }
 
     // ---------- Default backgrounds for each size ----------
@@ -434,9 +430,13 @@ body{
     }
     function cssColorToHex(c){ if(c.startsWith('#')) return c; return rgbToHex(getComputedStyle(Object.assign(document.createElement('div'),{style:{color:c}})).color); }
 
+    function isMobileDevice(){ return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent); }
+    function isIOS(){ return /iP(hone|ad|od)/i.test(navigator.userAgent); }
+
     function shouldDownscale(wPx, hPx) {
-      const MAX_SIDE   = 10000;
-      const MAX_PIXELS = 80e6;
+      // Tighter limits on mobile to avoid GPU/texture caps
+      const MAX_SIDE   = isMobileDevice() ? 8192 : 10000;
+      const MAX_PIXELS = isMobileDevice() ? 40e6 : 80e6;
       return (wPx > MAX_SIDE || hPx > MAX_SIDE || (wPx*hPx) > MAX_PIXELS);
     }
 
@@ -462,6 +462,25 @@ body{
           resolve(c.toDataURL('image/jpeg', quality));
         };
         img.src = dataUrl;
+      });
+    }
+
+    // ---- NEW: Promise timeout wrapper for html2canvas ----
+    async function safeHtml2Canvas(el, opts, timeoutMs = 20000){
+      return Promise.race([
+        window.html2canvas(el, opts),
+        new Promise((_, reject)=> setTimeout(()=> reject(new Error('Render timeout')), timeoutMs))
+      ]);
+    }
+
+    // NEW: image onload/onerror with fallback timeout (prevents forever pending on iOS)
+    function waitImage(img, timeoutMs = 5000){
+      return new Promise((resolve)=>{
+        let settled = false;
+        const done = ()=>{ if(!settled){ settled = true; resolve(); } };
+        img.onload = done;
+        img.onerror = done;
+        setTimeout(done, timeoutMs);
       });
     }
 
@@ -535,9 +554,6 @@ body{
         el.addEventListener(ev, ()=> { if (timer) { clearTimeout(timer); timer=null; } }, {passive:true});
       });
     }
-
-    function isMobileDevice(){ return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent); }
-    function isIOS(){ return /iP(hone|ad|od)/i.test(navigator.userAgent); }
 
     function enterInlineEdit(el){
       if (state.inlineEditing && texts[state.inlineEditing]) exitInlineEdit(texts[state.inlineEditing]);
@@ -1051,7 +1067,8 @@ body{
       const { jsPDF }=window.jspdf;
       const wIn=state.inches.w, hIn=state.inches.h;
       const pdf=new jsPDF({orientation:wIn>hIn?'l':'p', unit:'in', format:[wIn,hIn]});
-      const imgData=canvas.toDataURL('image/jpeg',1);
+      // Lower JPEG quality to reduce memory pressure on mobile
+      const imgData=canvas.toDataURL('image/jpeg',0.85);
       pdf.addImage(imgData,'JPEG',0,0,wIn,hIn);
       pdf.save(`poster-print-${state.size}-${state.dpi}dpi.pdf`);
       status('Done.');
@@ -1061,13 +1078,13 @@ body{
     async function renderPreviewPNG(){
       lockScroll();
       try{
-        const canvas=await html2canvas(previewStage,{
+        const canvas=await safeHtml2Canvas(previewStage,{
           allowTaint:false,
           useCORS:true,
           backgroundColor:'#ffffff',
           scale:1,
           ignoreElements: el => el.classList && el.classList.contains('guide')
-        });
+        }, 15000);
         return canvas.toDataURL('image/png');
       } finally { unlockScroll(); }
     }
@@ -1079,6 +1096,13 @@ body{
 
     async function renderPrintCanvas(){
       const {w,h}=state.inches; let dpi=state.dpi;
+
+      // Enforce safer DPI on mobile regardless of UI selection
+      if (isMobileDevice() && dpi > 200) {
+        dpi = 200;
+        status('On mobile: forced 200 DPI to improve stability.');
+      }
+
       let W=Math.round(w*dpi), H=Math.round(h*dpi);
 
       if (shouldDownscale(W,H)) {
@@ -1105,7 +1129,7 @@ body{
         const sx=W/pr.width, sy=H/pr.height;
         const k=(sx+sy)/2;
 
-        await new Promise((res)=>{ if (!bgUrl) return res(); img.onload=res; img.onerror=res; });
+        await waitImage(img, 6000); // <- prevent hang if CORS/Blob blocks events
 
         for(const id of ['t1','t2','t3']){
           const src=texts[id];
@@ -1135,7 +1159,6 @@ body{
             el.style.letterSpacing=(parseFloat(cs.letterSpacing)*k)+'px';
           }
 
-          
           // Apply text shadow: prefer dataset parameters, fallback to parsing computed style
           let sds = parseInt(src.dataset.shadowS || '0', 10);
           let sblur = parseFloat(src.dataset.shadowBlur || '0');
@@ -1157,7 +1180,7 @@ body{
           } else {
             el.style.textShadow = 'none';
           }
-el.style.display='inline-block';
+          el.style.display='inline-block';
           el.style.maxWidth='none';
           el.style.overflow='visible';
 
@@ -1167,9 +1190,9 @@ el.style.display='inline-block';
         printStage.appendChild(wrap);
 
         await (document.fonts && document.fonts.ready);
-        const canvas=await html2canvas(wrap,{
+        const canvas=await safeHtml2Canvas(wrap,{
           allowTaint:false,useCORS:true,backgroundColor:'#ffffff',scale:1,windowWidth:W,windowHeight:H,letterRendering:true
-        });
+        }, 25000);
         return canvas;
       } finally { unlockScroll(); }
     }
@@ -1327,7 +1350,7 @@ el.style.display='inline-block';
         if(!root) throw new Error('Export root not found');
 
         // 3) 渲染：用白底更稳（避免 iOS 空白）
-        const canvas = await window.html2canvas(root, { useCORS:true, backgroundColor:'#ffffff', scale:1 });
+        const canvas = await window.safeHtml2Canvas ? window.safeHtml2Canvas(root, { useCORS:true, backgroundColor:'#ffffff', scale:1 }, 15000) : window.html2canvas(root, { useCORS:true, backgroundColor:'#ffffff', scale:1 });
 
         // 4) 用 Blob + blob:URL，而不是 dataURL
         const blob = await new Promise(res => canvas.toBlob(b => res(b), 'image/png', 1));
