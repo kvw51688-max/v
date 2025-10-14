@@ -434,9 +434,21 @@ body{
     }
     function cssColorToHex(c){ if(c.startsWith('#')) return c; return rgbToHex(getComputedStyle(Object.assign(document.createElement('div'),{style:{color:c}})).color); }
 
+    
+    function devicePixelBudget(){
+      // Conservative budgets by device class to avoid mobile crashes
+      const isMobile = isMobileDevice();
+      const isPad = /iPad|Tablet|SM-T|Pixel C|Nexus 7|Nexus 9/i.test(navigator.userAgent);
+      if (isMobile && !isPad) {
+        return { MAX_SIDE: 8192, MAX_PIXELS: 24e6 };
+      } else if (isPad) {
+        return { MAX_SIDE: 10000, MAX_PIXELS: 36e6 };
+      } else {
+        return { MAX_SIDE: 12000, MAX_PIXELS: 80e6 };
+      }
+    }
     function shouldDownscale(wPx, hPx) {
-      const MAX_SIDE   = 10000;
-      const MAX_PIXELS = 80e6;
+      const { MAX_SIDE, MAX_PIXELS } = devicePixelBudget();
       return (wPx > MAX_SIDE || hPx > MAX_SIDE || (wPx*hPx) > MAX_PIXELS);
     }
 
@@ -1017,16 +1029,16 @@ body{
     btnWebPng.addEventListener('click', ()=> withBusy(btnWebPng, async ()=>{
       status('Generating web preview PNG…');
       await ensureFontsReady();
-      const dataUrl=await renderPreviewPNG();
-      triggerDownload(dataUrl,`poster-web-${state.size}.png`);
+      const payload=await renderPreviewPNG();
+      await triggerDownloadUniversal(payload || await renderPreviewPNG(),`poster-web-${state.size}.png`);
       status('Done.');
     }));
 
     btnPrintPng.addEventListener('click', ()=> withBusy(btnPrintPng, async ()=>{
       status(`Rendering print PNG (${state.dpi} dpi)…`);
       await ensureFontsReady();
-      const dataUrl=await renderPrintPNG();
-      triggerDownload(dataUrl,`poster-print-${state.size}-${state.dpi}dpi.png`);
+      const payload=await renderPrintPNG();
+      await triggerDownloadUniversal(payload || await renderPrintPNG(),`poster-print-${state.size}-${state.dpi}dpi.png`);
       status('Done.');
     }));
 
@@ -1037,7 +1049,7 @@ body{
       const { jsPDF }=window.jspdf;
       const wIn=state.inches.w, hIn=state.inches.h;
       const pdf=new jsPDF({orientation:wIn>hIn?'l':'p', unit:'in', format:[wIn,hIn]});
-      const imgData=canvas.toDataURL('image/jpeg',1);
+      const imgData=canvas.toDataURL('image/jpeg',0.92);
       pdf.addImage(imgData,'JPEG',0,0,wIn,hIn);
       pdf.save(`poster-print-${state.size}-${state.dpi}dpi.pdf`);
       status('Done.');
@@ -1059,8 +1071,15 @@ body{
     }
 
     async function renderPrintPNG(){
-      const canvas=await renderPrintCanvas();
-      return canvas.toDataURL('image/png');
+      const canvas = await renderPrintCanvas();
+      return await new Promise((resolve)=>{
+        if (canvas.toBlob) {
+          canvas.toBlob(b=> resolve(b || null), 'image/png', 1);
+        } else {
+          try { resolve(dataURLToBlob(canvas.toDataURL('image/png'))); }
+          catch(_) { resolve(null); }
+        }
+      });
     }
 
     async function renderPrintCanvas(){
@@ -1068,9 +1087,14 @@ body{
       let W=Math.round(w*dpi), H=Math.round(h*dpi);
 
       if (shouldDownscale(W,H)) {
-        dpi = Math.min(200, dpi);
-        W = Math.round(w*dpi);
-        H = Math.round(h*dpi);
+        // tighten dpi on mobile/tablet if still over budget
+        const firstTry = Math.min(200, dpi);
+        dpi = firstTry;
+        W = Math.round(w*dpi); H = Math.round(h*dpi);
+        if (shouldDownscale(W,H)) {
+          dpi = Math.max(100, Math.floor(firstTry * 0.75));
+          W = Math.round(w*dpi); H = Math.round(h*dpi);
+        }
         status(`Target too large → auto-downgraded to ${dpi} dpi (${W}×${H}px).`);
       }
 
@@ -1160,9 +1184,76 @@ el.style.display='inline-block';
       } finally { unlockScroll(); }
     }
 
-    function triggerDownload(dataUrl,filename){
-      const a=document.createElement('a'); a.href=dataUrl; a.download=filename;
-      document.body.appendChild(a); a.click(); a.remove();
+    
+    // Convert dataURL to Blob
+    function dataURLToBlob(dataURL){
+      const parts = dataURL.split(',');
+      const mime = parts[0].match(/:(.*?);/)[1];
+      const bstr = atob(parts[1]);
+      let n = bstr.length; const u8 = new Uint8Array(n);
+      while(n--) u8[n] = bstr.charCodeAt(n);
+      return new Blob([u8], {type: mime});
+    }
+
+    function isIOSSafari(){
+      return /iP(hone|ad|od)/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent);
+    }
+
+    async function triggerDownloadUniversal(payload, filename){
+      // payload can be Blob or dataURL string
+      try{
+        if (payload instanceof Blob){
+          if (isIOSSafari()){
+            // iOS Safari: open new tab with blob URL
+            const url = URL.createObjectURL(payload);
+            const win = window.open('', '_blank');
+            if (win){
+              win.document.write('<!doctype html><title>'+filename+'</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0}img{display:block;max-width:100%;height:auto;margin:0 auto}</style>');
+              win.document.body.innerHTML = '<img src="'+url+'" alt="image">';
+              win.addEventListener('load', ()=> URL.revokeObjectURL(url), {once:true});
+            } else {
+              // Fallback: prompt via location change
+              location.href = url;
+              setTimeout(()=>URL.revokeObjectURL(url), 4000);
+            }
+            return;
+          }
+          const a=document.createElement('a');
+          const url = URL.createObjectURL(payload);
+          a.href = url; a.download = filename;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(()=>URL.revokeObjectURL(url), 4000);
+          return;
+        }
+        // dataURL string
+        if (typeof payload === 'string'){
+          if (payload.startsWith('data:')){
+            if (isIOSSafari()){
+              // Convert to blob and open
+              try{
+                const blob = dataURLToBlob(payload);
+                return await triggerDownloadUniversal(blob, filename);
+              }catch(_){ /* fallthrough */ }
+            }
+            const a=document.createElement('a'); a.href=payload; a.download=filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            return;
+          } else if (payload.startsWith('blob:')){
+            const a=document.createElement('a'); a.href=payload; a.download=filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            return;
+          }
+        }
+        throw new Error('Unsupported payload for download');
+      }catch(e){
+        console.warn('triggerDownloadUniversal fallback', e);
+        alert('Download might be blocked by the browser. A preview will be opened instead.');
+        openImageInNewTab();
+      }
+    }
+function triggerDownload(dataUrl, filename){
+      // kept for backward compatibility, delegate to universal
+      return triggerDownloadUniversal(dataUrl, filename);
     }
 
     function warnIfLocalTooSmall(nw,nh){
@@ -1429,6 +1520,3 @@ el.style.display='inline-block';
 
 </body>
 </html>
-
-
-
