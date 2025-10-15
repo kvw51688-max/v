@@ -558,7 +558,7 @@
     const el=texts[id]; if(!el) return;
     el.innerText=textContent.value;
     el.style.fontSize=`${parseInt(fontSize.value,10)}px`;
-    el.style.lineHeight = '1.3';
+    el.style.lineHeight = '1.25';
     el.style.color=fontColor.value;
     el.style.fontWeight=bold.checked?'700':'400';
     el.style.fontStyle=italic.checked?'italic':'normal';
@@ -612,6 +612,13 @@
     }
   });
 
+// === Center Guides toggle ===
+guideSelect.addEventListener('change', () => {
+  const on = guideSelect.value === 'on';
+  guideH.classList.toggle('hidden', !on);
+  guideV.classList.toggle('hidden', !on);
+});
+    
   shadowStrength.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
   shadowBlur.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
   shadowColor.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
@@ -854,7 +861,7 @@
       el.style.textDecoration=cs.textDecoration;
       el.style.textAlign=cs.textAlign;
       el.style.whiteSpace=cs.whiteSpace||'pre-wrap';
-      el.style.lineHeight=(cs.lineHeight==='normal'?'1.3':cs.lineHeight);
+      el.style.lineHeight=(cs.lineHeight==='normal'?'1.25':cs.lineHeight);
       let sds = parseInt(src.dataset.shadowS||'0',10);
       let sblur = parseFloat(src.dataset.shadowBlur||'0');
       let scolor = src.dataset.shadowColor || '#000';
@@ -999,9 +1006,16 @@
   setActiveText(state.activeTextId);
   layoutGuides();
   status('Ready. Choose a background, edit texts, and export.');
+    // === Init Center Guides visibility on load ===
+(function initCenterGuides(){
+  const on = guideSelect.value === 'on';
+  guideH.classList.toggle('hidden', !on);
+  guideV.classList.toggle('hidden', !on);
+})();
 // Font load quick check
 try { for (const f of document.fonts) { console.log('[font]', f.family, f.status); } } catch(_) {}
   </script>
 </body>
 </html>
+
 
