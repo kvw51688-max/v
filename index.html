@@ -12,27 +12,34 @@
   <!-- html2canvas & jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-
-  <!-- Local Fonts preloads (relative paths; safe for GitHub Pages subpaths) -->
   <link rel="preload" href="fonts/inter/inter-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/inter/inter-700.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/roboto/roboto-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/montserrat/montserrat-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/bangers/bangers-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/playfairdisplay/playfairdisplay-400.woff2" as="font" type="font/woff2" crossorigin>
+<!-- Local Fonts preloads (relative paths; safe for GitHub Pages subpaths) -->
+  
+  
+
+
 
   <style>
+    
+  /* ===== Local font faces (exactly as in your repo) ===== */
+  
     @font-face { font-family: 'Inter'; src: url('fonts/inter/inter-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Inter'; src: url('fonts/inter/inter-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Baloo2'; src: url('fonts/baloo2/baloo2-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Bangers'; src: url('fonts/bangers/bangers-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Chewy'; src: url('fonts/chewy/chewy-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Creepster'; src: url('fonts/creepster/creepster-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Dancing Script'; src: url('fonts/handwriting/dancing-script-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Dancing Script'; src: url('fonts/dancingscript/dancingscript-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
     @font-face { font-family: 'DM Serif Display'; src: url('fonts/dmserifdisplay/dmserifdisplay-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Great Vibes'; src: url('fonts/handwriting/great-vibes-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Great Vibes'; src: url('fonts/greatvibes/greatvibes-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Manrope'; src: url('fonts/manrope/manrope-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Noto Sans Display'; src: url('fonts/notosansdisplay/notosansdisplay-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Pacifico'; src: url('fonts/handwriting/pacifico-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Pacifico'; src: url('fonts/pacifico/pacifico-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Playfair Display'; src: url('fonts/playfairdisplay/playfairdisplay-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+
 
     .draggable{ position:absolute; cursor:move; user-select:none; touch-action:none; white-space:pre-wrap; line-height:1.15; transition: box-shadow .15s ease, outline-color .15s ease, outline-offset .15s ease; }
     .draggable.active{ outline:2px dashed #6366f1; outline-offset:2px; }
@@ -186,6 +193,8 @@
             <div>
               <label class="block text-xs mb-1">Font family</label>
               
+
+
 <select id="fontFamily" class="w-full border rounded px-2 py-1 text-sm">
   <option value="'Inter', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Inter (Sans)</option>
   <option value="'Baloo2', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Baloo2 (Rounded Sans)</option>
@@ -200,6 +209,8 @@
   <option value="'Dancing Script', 'Comic Sans MS', cursive">Dancing Script (Handwriting)</option>
   <option value="'Great Vibes', 'Comic Sans MS', cursive">Great Vibes (Handwriting)</option>
 </select>
+
+
 
             </div>
             <div class="flex flex-wrap items-center gap-2 text-xs">
@@ -563,6 +574,23 @@
     el.style.textDecoration=underline.checked?'underline':'none';
     el.style.textAlign=align.value;
     el.style.fontFamily=fontFamily.value;
+    // Enforce 400 for families that only have 400 to avoid fake bold / fallback illusion
+    (function enforceWeightFor400() {
+      try {
+        const famName = (fontFamily.value.split(',')[0] || '').replace(/['"]/g,'').trim();
+        const only400 = new Set(['Baloo2','Bangers','Chewy','Creepster','DM Serif Display','Manrope','Noto Sans Display','Playfair Display','Pacifico','Great Vibes']);
+        if (only400.has(famName)) { el.style.fontWeight = '400'; }
+      } catch(_) {}
+    })();
+    // 强制仅400字重的字体使用 400，避免伪粗回退
+    (function enforceWeightFor400() {
+      try {
+        const famName = (fontFamily.value.split(',')[0] || '').replace(/['"]/g,'').trim();
+        const only400 = new Set(['Baloo2','Bangers','Chewy','Creepster','DM Serif Display','Manrope','Noto Sans Display','Playfair Display','Pacifico','Dancing Script','Great Vibes']);
+        if (only400.has(famName)) { el.style.fontWeight = '400'; }
+      } catch(_) {}
+    })();
+    
     const s=parseInt(shadowStrength.value,10)||0;
     const bl=parseInt(shadowBlur.value,10)||0;
     const off=Math.round(s/10)||0;
@@ -980,7 +1008,8 @@
   setActiveText(state.activeTextId);
   layoutGuides();
   status('Ready. Choose a background, edit texts, and export.');
+// Font load quick check
+try { for (const f of document.fonts) { console.log('[font]', f.family, f.status); } } catch(_) {}
   </script>
 </body>
 </html>
-
