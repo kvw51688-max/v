@@ -119,12 +119,12 @@
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
-  <!-- ✅ iOS 下载提示（仅在 iOS 显示，可关闭） -->
-  <div id="iosNotice" class="hidden bg-yellow-50 text-yellow-900 text-sm px-4 py-2">
-    提示：检测到您正在使用 iOS 设备。如果下载打印文件失败或空白，请尝试将 DPI 设为 200，
-    或者 <b>请使用电脑进行操作</b> 再次导出。
-    <button id="closeIosNotice" class="float-right text-yellow-800 hover:underline">关闭</button>
-  </div>
+  <!-- ✅ iOS Download Notice (shown only on iOS, can be closed) -->
+<div id="iosNotice" class="hidden bg-yellow-50 text-yellow-900 text-sm px-4 py-2">
+  Notice: Detected iOS device. If the downloaded file appears blank or fails to export, please try setting the DPI to 200,
+  or <b>use a computer</b> to export again.
+  <button id="closeIosNotice" class="float-right text-yellow-800 hover:underline">Close</button>
+</div>
 
   <!-- Header -->
   <header class="border-b bg-white sticky top-0 z-30">
@@ -811,10 +811,10 @@
   function handleExportError(e){
     console.error(e);
     if(isIOS()){
-      alert('导出失败或下载空白：\n• 请在“Print DPI”下拉中选择 200 dpi 再试；\n• 或者请使用电脑进行操作后再次导出。');
-    }else{
-      alert('Export failed. Try 200 DPI or a smaller image. If the issue persists, try on a desktop.');
-    }
+  alert('Export failed or blank file:\n• Please select 200 DPI from the "Print DPI" dropdown and try again;\n• Or use a computer to export the file again.');
+}else{
+  alert('Export failed. Try 200 DPI or a smaller image. If the issue persists, try on a desktop.');
+}
   }
 
   async function renderPrintCanvas(includeGuides){
@@ -1051,3 +1051,4 @@
   </script>
 </body>
 </html>
+
