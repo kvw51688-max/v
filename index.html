@@ -35,7 +35,6 @@
     @font-face { font-family: 'Pacifico'; src: url('fonts/pacifico/pacifico-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Playfair Display'; src: url('fonts/playfairdisplay/playfairdisplay-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
 
-
     .draggable{ position:absolute; cursor:move; user-select:none; touch-action:none; white-space:pre-wrap; line-height:1.15; transition: box-shadow .15s ease, outline-color .15s ease, outline-offset .15s ease; }
     .draggable.active{ outline:2px dashed #6366f1; outline-offset:2px; }
     .draggable.editing{ cursor:text; outline:2px solid #6366f1; outline-offset:2px; box-shadow: 0 0 0 4px rgba(99,102,241,.15); }
@@ -188,8 +187,6 @@
             <div>
               <label class="block text-xs mb-1">Font family</label>
               
-
-
 <select id="fontFamily" class="w-full border rounded px-2 py-1 text-sm">
   <option value="'Inter', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Inter (Sans)</option>
   <option value="'Baloo2', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Baloo2 (Rounded Sans)</option>
@@ -204,8 +201,6 @@
   <option value="'Dancing Script', 'Comic Sans MS', cursive">Dancing Script (Handwriting)</option>
   <option value="'Great Vibes', 'Comic Sans MS', cursive">Great Vibes (Handwriting)</option>
 </select>
-
-
 
             </div>
             <div class="flex flex-wrap items-center gap-2 text-xs">
@@ -1008,5 +1003,3 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
   </script>
 </body>
 </html>
-
-
