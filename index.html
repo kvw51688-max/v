@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
-  <title>DIY Poster Creator – 24×30 / 24×50 in (Enhanced + Local Fonts)</title>
+  <title>DIY Poster Creator — GH Pages Ready (Patched)</title>
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -12,29 +12,26 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
-  <!-- ✅ Local Fonts preloads (place corresponding woff2 files under /fonts) -->
-  <link rel="preload" href="/fonts/inter/inter-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/inter/inter-700.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/roboto/roboto-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/montserrat/montserrat-400.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Local Fonts preloads (relative paths; safe for GitHub Pages subpaths) -->
+  <link rel="preload" href="fonts/inter/inter-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/inter/inter-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/roboto/roboto-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/montserrat/montserrat-400.woff2" as="font" type="font/woff2" crossorigin>
 
   <style>
-    /* ===================== Local Font Faces ===================== */
-    @font-face { font-family: 'Inter'; src: url('/fonts/inter/inter-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Inter'; src: url('/fonts/inter/inter-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Inter'; src: url('fonts/inter/inter-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Inter'; src: url('fonts/inter/inter-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
 
-    @font-face { font-family: 'Roboto'; src: url('/fonts/roboto/roboto-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Open Sans'; src: url('/fonts/open-sans/opensans-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Montserrat'; src: url('/fonts/montserrat/montserrat-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Poppins'; src: url('/fonts/poppins/poppins-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Roboto'; src: url('fonts/roboto/roboto-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Open Sans'; src: url('fonts/open-sans/opensans-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Montserrat'; src: url('fonts/montserrat/montserrat-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Poppins'; src: url('fonts/poppins/poppins-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
 
-    /* Handwriting (wedding etc.) */
-    @font-face { font-family: 'Great Vibes'; src: url('/fonts/handwriting/great-vibes-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Dancing Script'; src: url('/fonts/handwriting/dancing-script-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Pacifico'; src: url('/fonts/handwriting/pacifico-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Caveat'; src: url('/fonts/handwriting/caveat-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Great Vibes'; src: url('fonts/handwriting/great-vibes-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Dancing Script'; src: url('fonts/handwriting/dancing-script-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Pacifico'; src: url('fonts/handwriting/pacifico-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Caveat'; src: url('fonts/handwriting/caveat-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
 
-    /* ===================== App Styles ===================== */
     .draggable{ position:absolute; cursor:move; user-select:none; touch-action:none; white-space:pre-wrap; line-height:1.15; transition: box-shadow .15s ease, outline-color .15s ease, outline-offset .15s ease; }
     .draggable.active{ outline:2px dashed #6366f1; outline-offset:2px; }
     .draggable.editing{ cursor:text; outline:2px solid #6366f1; outline-offset:2px; box-shadow: 0 0 0 4px rgba(99,102,241,.15); }
@@ -50,37 +47,17 @@
     .guide-safe  { outline:2px dashed rgba(34,197,94,.9); }
     .guide-bleed { outline:2px dashed rgba(59,130,246,.9); }
 
-    .export-ignore{ }
-    #printStage{ position:fixed; left:-99999px; top:-99999px; background:#fff; overflow:hidden; }
-
-    :root{ --ab-h: 88px; }
-    @media (min-width:1024px){ :root{ --ab-h: 0px; } }
-
-    /* ✅ FIX: make status message inline so it never blocks footer buttons */
-    #statusMsg{
-      position: static; /* was fixed */
-      background: transparent; /* remove dark bubble */
-      color: #64748b;
-      padding: 0;
-      border-radius: 0;
-      font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      pointer-events: none; /* never intercept taps */
-      z-index: 10; /* below footer */
-    }
-
+    #statusMsg{ position: static; background: transparent; color: #64748b; padding: 0; border-radius: 0; font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; pointer-events: none; z-index: 10; }
     footer { border-top:1px solid #e2e8f0; background:#fff; font-size:12px; color:#64748b; }
-    footer a { color:#0ea5e9; text-decoration:none; }
-    footer a:hover { text-decoration:underline; }
+    footer a { color:#0ea5e9; text-decoration:none; } footer a:hover { text-decoration:underline; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
-  <!-- ✅ iOS Download Notice (shown only on iOS, can be closed) -->
   <div id="iosNotice" class="hidden bg-yellow-50 text-yellow-900 text-sm px-4 py-2">
     Notice: Detected iOS device. If the downloaded print file fails or appears blank, please try setting DPI to 200, or <b>use a computer</b> to export again.
     <button id="closeIosNotice" class="float-right text-yellow-800 hover:underline">Close</button>
   </div>
 
-  <!-- Header -->
   <header class="border-b bg-white sticky top-0 z-30">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
       <h1 class="text-lg md:text-xl font-semibold">DIY Poster Creator</h1>
@@ -91,8 +68,7 @@
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-    <!-- Preview -->
+  <main class="max-w-6xl mx-auto p-4 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-4">
     <section class="lg:col-span-8">
       <div id="tipBar" class="mb-3 text-xs md:text-sm p-2 rounded border bg-blue-50 text-blue-800">
         Click a text to select; <b>double-click</b> (desktop) or <b>long-press 0.6s</b> (mobile) to edit inline.
@@ -103,16 +79,13 @@
       <div id="previewStage" class="rounded-lg shadow-sm bg-white">
         <div id="previewBgWrap"><img id="previewBgImg" alt="background"></div>
 
-        <!-- Center guides -->
         <div class="guide-center hidden export-ignore" id="guideH"></div>
         <div class="guide-center v hidden export-ignore" id="guideV"></div>
 
-        <!-- Bleed / Trim / Safe Area (preview overlays) -->
         <div id="bleedGuide" class="guide-bleed hidden export-ignore" aria-hidden="true"></div>
         <div id="trimGuide"  class="guide-trim  hidden export-ignore" aria-hidden="true"></div>
         <div id="safeGuide"  class="guide-safe  hidden export-ignore" aria-hidden="true"></div>
 
-        <!-- Draggable texts -->
         <div id="t1" class="draggable text-3xl font-bold" style="left:50%; top:20%; transform:translateX(-50%); text-align:center;">MAIN TITLE</div>
         <div id="t2" class="draggable text-xl" style="left:50%; top:35%; transform:translateX(-50%); text-align:center;">Subtitle goes here</div>
         <div id="t3" class="draggable text-base" style="left:50%; top:50%; transform:translateX(-50%); text-align:center;">Description or notes</div>
@@ -121,10 +94,8 @@
       <div class="mt-3 text-xs md:text-sm text-slate-600" id="specInfo"></div>
     </section>
 
-    <!-- Controls -->
     <aside class="lg:col-span-4">
       <div class="bg-white rounded-xl shadow p-4 space-y-4">
-        <!-- Size -->
         <div>
           <label class="block text-sm font-medium mb-1">Poster Size (inches)</label>
           <select id="sizeSelect" class="w-full border rounded px-3 py-2">
@@ -133,7 +104,6 @@
           </select>
         </div>
 
-        <!-- DPI + Center Guides -->
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block text-sm font-medium mb-1">Print DPI</label>
@@ -151,7 +121,6 @@
           </div>
         </div>
 
-        <!-- Background picker -->
         <div class="space-y-2">
           <div class="flex items-center justify-between gap-2">
             <label class="text-sm font-medium">Background</label>
@@ -178,19 +147,16 @@
             Tip: Thumbnails are lazy-loaded. Print uses original at 300/200 dpi. Local uploads are embedded.
           </p>
         </div>
-        
-<!-- ==================== 插入这里：布局模板按钮区 START ==================== -->
+
         <div class="space-y-1">
           <label class="block text-sm font-medium mb-1">Text Layout Template</label>
           <div class="flex flex-wrap gap-2 text-xs">
-              <button class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200" onclick="applyLayout('centered')">Centered</button>
-              <button class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200" onclick="applyLayout('topLeft')">Top Left</button>
-              <button class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200" onclick="applyLayout('bottomRight')">Bottom Right</button>
-            </div>
+            <button class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200" onclick="applyLayout('centered')">Centered</button>
+            <button class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200" onclick="applyLayout('topLeft')">Top Left</button>
+            <button class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200" onclick="applyLayout('bottomRight')">Bottom Right</button>
           </div>
-<!-- ==================== 插入这里：布局模板按钮区 END ==================== -->
+        </div>
 
-        <!-- Text editor -->
         <div class="space-y-3">
           <div class="flex items-center justify-between">
             <span class="text-sm font-medium">Edit Text</span>
@@ -262,7 +228,6 @@
           </div>
         </div>
 
-        <!-- Print-shop helpers -->
         <div class="space-y-3 border-t pt-3">
           <div class="grid grid-cols-2 gap-2">
             <div>
@@ -294,7 +259,6 @@
     </aside>
   </main>
 
-  <!-- Footer (actions) -->
   <footer class="fixed bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur z-50" id="actionBar">
     <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
       <div class="flex items-center gap-2 text-xs md:text-sm">
@@ -314,7 +278,6 @@
     </div>
   </footer>
 
-  <!-- ✅ License footer -->
   <div class="text-center py-3" style="border-top:1px solid #e2e8f0;background:#fff;">
     <p class="text-xs text-slate-500">
       Fonts by <a href="https://fonts.google.com/" target="_blank" rel="noopener noreferrer">Google Fonts</a>
@@ -325,26 +288,15 @@
   <div id="printStage"></div>
 
   <script>
-  // ===================== State & Elements =====================
   const DEFAULT_BG = {
-    '24x30': {
-      small: 'https://kvw51688-max.github.io/v/24-30-1.webp',
-      large: 'https://kvw51688-max.github.io/v/24-30-1.png'
-    },
-    '24x50': {
-      small: 'https://kvw51688-max.github.io/v/24-50-1.webp',
-      large: 'https://kvw51688-max.github.io/v/24-50-1.png'
-    }
+    '24x30': { small: 'assets/24-30-1.webp', large: 'assets/24-30-1.png' },
+    '24x50': { small: 'assets/24-50-1.webp', large: 'assets/24-50-1.png' }
   };
   const ASSET_LIBRARY = [
     { id:'lib-2430-1', label:'24×30 – BG #1', size:'24x30',
-      small:'https://kvw51688-max.github.io/v/24-30-1.webp',
-      large:'https://kvw51688-max.github.io/v/24-30-1.png',
-      naturalW: 3600, naturalH: 4500 },
+      small:'assets/24-30-1.webp', large:'assets/24-30-1.png', naturalW: 3600, naturalH: 4500 },
     { id:'lib-2450-1', label:'24×50 – BG #1', size:'24x50',
-      small:'https://kvw51688-max.github.io/v/24-50-1.webp',
-      large:'https://kvw51688-max.github.io/v/24-50-1.png',
-      naturalW: 4800, naturalH: 10000 }
+      small:'assets/24-50-1.webp', large:'assets/24-50-1.png', naturalW: 4800, naturalH: 10000 }
   ];
   const PAGE_SIZE = 12;
 
@@ -404,25 +356,18 @@
   const iosNotice = document.getElementById('iosNotice');
   const closeIosNotice = document.getElementById('closeIosNotice');
 
-  // ===================== Utilities =====================
   function status(msg){ statusMsg.textContent=msg; }
   function parsePercent(v){ if(!v) return NaN; if(String(v).trim().endsWith('%')) return parseFloat(v); return NaN; }
-  function isMobile(){ return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent); }
   function isIOS(){ return /iP(hone|ad|od)/i.test(navigator.userAgent); }
   function lockScroll(){ document.body.style.overflow='hidden'; }
   function unlockScroll(){ document.body.style.overflow=''; }
-  function rgbToHex(rgb){ const m=rgb.match(/\d+/g); if(!m) return '#000000'; const [r,g,b]=m.map(Number); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+  function rgbToHex(rgb){ const m=rgb.match(/\\d+/g); if(!m) return '#000000'; const [r,g,b]=m.map(Number); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+  function rgbToStyleHex(c){ if(!c) return '#000000'; if(c.startsWith('#')) return c; return rgbToHex(getComputedStyle(Object.assign(document.createElement('div'),{style:{color:c}})).color); }
   async function ensureFontsReady(){ if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch(_){} } }
+  function getPoint(e){ if(e.touches&&e.touches[0]) return {x:e.touches[0].clientX,y:e.touches[0].clientY}; return {x:e.clientX,y:e.clientY};}
 
-  // iOS top notice
-  (function(){
-    if(isIOS()){
-      iosNotice.classList.remove('hidden');
-      closeIosNotice.addEventListener('click', ()=> iosNotice.classList.add('hidden'));
-    }
-  })();
+  (function(){ if(isIOS()){ iosNotice.classList.remove('hidden'); closeIosNotice.addEventListener('click', ()=> iosNotice.classList.add('hidden')); } })();
 
-  // ===================== Size / DPI =====================
   function setSize(v){
     state.picks[state.size] = {
       small: state.preview.bgSmall, large: state.preview.bgLarge, isLocal: state.preview.isLocal,
@@ -447,14 +392,12 @@
     layoutGuides();
   }
   function setDpi(v){ state.dpi=parseInt(v,10); updateSpecInfo(); }
-
   function updateSpecInfo(){
     const {w,h}=state.inches;
     const printWpx=Math.round(w*state.dpi), printHpx=Math.round(h*state.dpi);
     specInfo.innerHTML = `<b>Spec:</b> Print ${w}×${h} in @ ${state.dpi} dpi → <b>${printWpx}×${printHpx} px</b>`;
   }
 
-  // ===================== Preview BG =====================
   function applyPreviewBg(){
     previewBgImg.crossOrigin = 'anonymous';
     previewBgImg.src = state.preview.bgSmall || DEFAULT_BG[state.size].small;
@@ -466,7 +409,6 @@
     };
   }
 
-  // ===================== Thumbs / Library =====================
   function getAllItemsForSize(size){ return ASSET_LIBRARY.filter(i=>i.size===size); }
   function buildThumbs(){
     thumbGrid.innerHTML='';
@@ -477,8 +419,7 @@
     const page = Math.min(Math.max(0, state.pageIndex[size] || 0), totalPages - 1);
     state.pageIndex[size] = page;
 
-    const start = page * PAGE_SIZE;
-    const end = Math.min(total, start + PAGE_SIZE);
+    const start = page * PAGE_SIZE, end = Math.min(total, start + PAGE_SIZE);
     const pageItems = all.slice(start, end);
 
     pageItems.forEach(item=>{
@@ -522,10 +463,9 @@
     state.pageIndex[state.size]=totalPages-1; buildThumbs();
   });
 
-  // ===================== Local upload =====================
   bgUpload.addEventListener('change', async(e)=>{
     const file=e.target.files?.[0]; if(!file) return;
-    const dataUrl=await readFileAsDataURL(file);
+    const dataUrl=await new Promise((resolve,reject)=>{ const fr=new FileReader(); fr.onload=()=>resolve(fr.result); fr.onerror=reject; fr.readAsDataURL(file); });
     const img=new Image();
     img.onload=()=>{
       state.preview.isLocal=true;
@@ -539,12 +479,6 @@
     };
     img.src=dataUrl;
   });
-  function readFileAsDataURL(file){
-    return new Promise((resolve,reject)=>{
-      const fr=new FileReader();
-      fr.onload=()=>resolve(fr.result); fr.onerror=reject; fr.readAsDataURL(file);
-    });
-  }
   resetBg.addEventListener('click', ()=>{
     const v = state.size;
     Object.assign(state.preview, { isLocal:false, bgSmall:DEFAULT_BG[v].small, bgLarge:DEFAULT_BG[v].large, naturalW:null, naturalH:null });
@@ -552,49 +486,49 @@
     status('Background reset to default.');
   });
 
-    // ==================== 插入这里：布局模板逻辑 START ====================
-// 预设三种布局模板
-const layoutTemplates = {
-  centered: [
-    { id:'t1', left:'50%', top:'20%', align:'center' },
-    { id:'t2', left:'50%', top:'35%', align:'center' },
-    { id:'t3', left:'50%', top:'50%', align:'center' },
-  ],
-  topLeft: [
-    { id:'t1', left:'10%', top:'10%', align:'left' },
-    { id:'t2', left:'10%', top:'25%', align:'left' },
-    { id:'t3', left:'10%', top:'40%', align:'left' },
-  ],
-  bottomRight: [
-    { id:'t1', left:'60%', top:'65%', align:'right' },
-    { id:'t2', left:'60%', top:'75%', align:'right' },
-    { id:'t3', left:'60%', top:'85%', align:'right' },
-  ]
-};
+  const layoutTemplates = {
+    centered: [
+      { id:'t1', left:'50%', top:'20%', align:'center' },
+      { id:'t2', left:'50%', top:'35%', align:'center' },
+      { id:'t3', left:'50%', top:'50%', align:'center' },
+    ],
+    topLeft: [
+      { id:'t1', left:'10%', top:'10%', align:'left' },
+      { id:'t2', left:'10%', top:'25%', align:'left' },
+      { id:'t3', left:'10%', top:'40%', align:'left' },
+    ],
+    bottomRight: [
+      { id:'t1', left:'60%', top:'65%', align:'right' },
+      { id:'t2', left:'60%', top:'75%', align:'right' },
+      { id:'t3', left:'60%', top:'85%', align:'right' },
+    ]
+  };
+  function applyLayout(name){
+    const tpl = layoutTemplates[name];
+    if(!tpl) return;
+    tpl.forEach(t=>{
+      const el = document.getElementById(t.id);
+      el.style.left = t.left;
+      el.style.top = t.top;
+      el.style.textAlign = t.align;
+      el.style.transform = (t.align === 'center') ? 'translateX(-50%)' : 'none';
 
-// 一键应用模板函数
-function applyLayout(name){
-  const tpl = layoutTemplates[name];
-  if(!tpl) return;
-  tpl.forEach(t=>{
-    const el = document.getElementById(t.id);
-    el.style.left = t.left;
-    el.style.top = t.top;
-    el.style.textAlign = t.align;
-    el.style.transform = (t.align === 'center') ? 'translateX(-50%)' : 'none';
-  });
-  status(`Applied layout: ${name}`);
-}
-// ==================== 插入这里：布局模板逻辑 END ====================
+      const b = previewStage.getBoundingClientRect();
+      const leftP = (String(t.left).trim().endsWith('%')) ? parseFloat(t.left) : (parseFloat(t.left) / b.width) * 100;
+      const topP  = (String(t.top).trim().endsWith('%'))  ? parseFloat(t.top)  : (parseFloat(t.top)  / b.height)* 100;
+      el.dataset.leftPercent = isFinite(leftP) ? leftP.toFixed(6) : el.dataset.leftPercent;
+      el.dataset.topPercent  = isFinite(topP)  ? topP.toFixed(6)  : el.dataset.topPercent;
+    });
+    clampPositionsToStage();
+    status('Applied layout: ' + name);
+  }
 
-  // ===================== Text Editing =====================
   function setActiveText(id){
     state.activeTextId = id;
     for (const el of Object.values(texts)) el.classList.remove('active');
     texts[id]?.classList.add('active');
     loadTextEditorFrom(id);
   }
-  function rgbToStyleHex(c){ if(!c) return '#000000'; if(c.startsWith('#')) return c; return rgbToHex(getComputedStyle(Object.assign(document.createElement('div'),{style:{color:c}})).color); }
   function loadTextEditorFrom(id){
     const el=texts[id]; if(!el) return;
     for (const n of Object.values(texts)) n.classList.remove('active');
@@ -641,8 +575,22 @@ function applyLayout(name){
   bold.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
   italic.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
   underline.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
-  align.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
   fontFamily.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
+
+  // Patch 1: align=center also centers the box
+  align.addEventListener('change', ()=>{
+    applyEditorTo(state.activeTextId);
+    if (align.value === 'center') {
+      const el = texts[state.activeTextId];
+      if (el) {
+        el.style.left = '50%';
+        el.style.transform = 'translateX(-50%)';
+        normalizePercentPosition(el, previewStage);
+        clampPositionsToStage();
+      }
+    }
+  });
+
   shadowStrength.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
   shadowBlur.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
   shadowColor.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
@@ -651,12 +599,27 @@ function applyLayout(name){
   function makeDraggable(el,boundary){
     normalizePercentPosition(el,boundary);
     let isDown=false, startX=0,startY=0, startLeftPx=0, startTopPx=0;
+    let hadCenterTransform = false;
+
     const down=e=>{
       if (el.classList.contains('editing')) return;
       isDown=true; const p=getPoint(e); startX=p.x; startY=p.y;
-      const b=boundary.getBoundingClientRect(); const {leftPercent, topPercent} = getInlineLeftTop(el, b);
-      startLeftPx = leftPercent * b.width / 100;
-      startTopPx  = topPercent  * b.height/ 100;
+
+      // Patch 2: temporarily remove translateX(-50%) to avoid boundary miscalc
+      hadCenterTransform = (el.style.transform || '').includes('translateX(-50%)');
+      if (hadCenterTransform) {
+        const b = boundary.getBoundingClientRect();
+        const r = el.getBoundingClientRect();
+        const leftPxReal = r.left - b.left;
+        const leftPercentReal = (leftPxReal / b.width) * 100;
+        el.style.transform = 'none';
+        el.style.left = `${leftPercentReal}%`;
+        el.dataset.leftPercent = leftPercentReal.toFixed(6);
+      }
+
+      const b=boundary.getBoundingClientRect(); const leftTop = getInlineLeftTop(el, b);
+      startLeftPx = leftTop.leftPercent * b.width / 100;
+      startTopPx  = leftTop.topPercent  * b.height/ 100;
       e.preventDefault(); setActiveText(el.id);
     };
     const move=e=>{
@@ -672,7 +635,17 @@ function applyLayout(name){
       el.dataset.leftPercent = leftPercent.toFixed(6);
       el.dataset.topPercent  = topPercent.toFixed(6);
     };
-    const up=()=>{ isDown=false; };
+    const up=()=>{
+      if(!isDown) return;
+      isDown=false;
+      const stillCenterText = (getComputedStyle(el).textAlign === 'center');
+      if (hadCenterTransform && stillCenterText) {
+        el.style.transform = 'translateX(-50%)';
+        el.style.left = '50%';
+        el.dataset.leftPercent = '50.000000';
+      }
+      clampPositionsToStage();
+    };
     el.addEventListener('mousedown',down);
     window.addEventListener('mousemove',move);
     window.addEventListener('mouseup',up);
@@ -680,7 +653,6 @@ function applyLayout(name){
     window.addEventListener('touchmove',move,{passive:false});
     window.addEventListener('touchend',up);
   }
-  function getPoint(e){ if(e.touches&&e.touches[0]) return {x:e.touches[0].clientX,y:e.touches[0].clientY}; return {x:e.clientX,y:e.clientY};}
   function normalizePercentPosition(el, boundary){
     const b=boundary.getBoundingClientRect();
     let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
@@ -718,7 +690,12 @@ function applyLayout(name){
     }
   }
 
-  // ===================== Guides (bleed/trim/safe) =====================
+  // Patch 3: Re-layout guides and clamp on resize
+  window.addEventListener('resize', ()=>{
+    layoutGuides();
+    clampPositionsToStage();
+  });
+
   function layoutGuides(){
     const {w}=state.inches;
     const pxPerInPreview = previewStage.clientWidth / w;
@@ -741,7 +718,6 @@ function applyLayout(name){
   });
   [safeIn, bleedIn].forEach(inp=> inp.addEventListener('input', ()=>{ if(showGuides.checked) layoutGuides(); }));
 
-  // ===================== Export (with resolution gate) =====================
   function requiredPixels(){ return { W: Math.round(state.inches.w*state.dpi), H: Math.round(state.inches.h*state.dpi) }; }
   function checkResolutionOk(){
     const {W,H} = requiredPixels();
@@ -763,18 +739,18 @@ function applyLayout(name){
 
   btnWebPng.addEventListener('click', async()=>{
     try{
-      lockScroll();
+      document.body.style.overflow='hidden';
       status('Generating web preview PNG…');
       await ensureFontsReady();
       const dataUrl=await html2canvas(previewStage,{
         allowTaint:false, useCORS:true, backgroundColor:'#ffffff', scale:1,
         ignoreElements: el => el.classList?.contains('export-ignore')
       }).then(c=>c.toDataURL('image/png'));
-      triggerDownload(dataUrl,`poster-web-${state.size}.png`);
+      const a=document.createElement('a'); a.href=dataUrl; a.download='poster-web-'+state.size+'.png'; document.body.appendChild(a); a.click(); a.remove();
       status('Done.');
     } catch(e){
       handleExportError(e);
-    } finally { unlockScroll(); }
+    } finally { document.body.style.overflow=''; }
   });
 
   btnPrintPng.addEventListener('click', async()=>{
@@ -784,7 +760,7 @@ function applyLayout(name){
         status(`Rendering print PNG (${state.dpi} dpi)…`);
         await ensureFontsReady();
         const dataUrl=await renderPrintCanvas(false).then(c=>c.toDataURL('image/png'));
-        triggerDownload(dataUrl,`poster-print-${state.size}-${state.dpi}dpi.png`);
+        const a=document.createElement('a'); a.href=dataUrl; a.download='poster-print-'+state.size+'-'+state.dpi+'dpi.png'; document.body.appendChild(a); a.click(); a.remove();
         status('Done.');
       } catch(e){ handleExportError(e); throw e; }
     });
@@ -802,7 +778,7 @@ function applyLayout(name){
         const pdf=new jsPDF({orientation:wIn>hIn?'l':'p', unit:'in', format:[wIn,hIn]});
         const imgData=canvas.toDataURL('image/jpeg',1);
         pdf.addImage(imgData,'JPEG',0,0,wIn,hIn);
-        pdf.save(`poster-print-${state.size}-${state.dpi}dpi.pdf`);
+        pdf.save('poster-print-'+state.size+'-'+state.dpi+'dpi.pdf');
         status('Done.');
       } catch(e){ handleExportError(e); throw e; }
     });
@@ -811,7 +787,7 @@ function applyLayout(name){
   function handleExportError(e){
     console.error(e);
     if(isIOS()){
-      alert('Export failed or blank file:\n• Please select 200 DPI from the "Print DPI" dropdown and try again;\n• Or use a computer to export the file again.');
+      alert('Export failed or blank file:\\n• Please select 200 DPI from the \"Print DPI\" dropdown and try again;\\n• Or use a computer to export the file again.');
     }else{
       alert('Export failed. Try 200 DPI or a smaller image. If the issue persists, try on a desktop.');
     }
@@ -900,139 +876,93 @@ function applyLayout(name){
       el.classList.remove('opacity-70','cursor-wait');
     }
   }
-  function triggerDownload(dataUrl,filename){
-    const a=document.createElement('a'); a.href=dataUrl; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
-  }
-
-  // ===================== localStorage Save / Load / Clear =====================
-  const STORAGE_KEY = 'posterDesignV1';
-  function collectDesign(){
-    const txt = {};
-    for(const id of Object.keys(texts)){
-      const el = texts[id];
-      txt[id] = {
-        content: el.innerText,
-        style: {
-          fontSize: getComputedStyle(el).fontSize,
-          color: getComputedStyle(el).color,
-          fontWeight: getComputedStyle(el).fontWeight,
-          fontStyle: getComputedStyle(el).fontStyle,
-          textDecoration: getComputedStyle(el).textDecoration,
-          textAlign: getComputedStyle(el).textAlign,
-          fontFamily: getComputedStyle(el).fontFamily
-        },
-        pos: { leftPercent: el.dataset.leftPercent, topPercent: el.dataset.topPercent },
-        shadow: { s: el.dataset.shadowS||'0', blur: el.dataset.shadowBlur||'0', color: el.dataset.shadowColor||'#000' }
-      };
+  function parsePercent(v){ if(!v) return NaN; if(String(v).trim().endsWith('%')) return parseFloat(v); return NaN; }
+  function getInlineLeftTop(el, brect){
+    let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
+    if(Number.isNaN(lp) || Number.isNaN(tp)){
+      const r=el.getBoundingClientRect();
+      lp = ( (r.left - brect.left) / brect.width ) * 100;
+      tp = ( (r.top  - brect.top ) / brect.height) * 100;
     }
-    return {
-      version:1,
-      size: state.size,
-      dpi: state.dpi,
-      inches: state.inches,
-      preview: {
-        isLocal: state.preview.isLocal,
-        small: state.preview.bgSmall,
-        large: state.preview.bgLarge,
-        naturalW: state.preview.naturalW,
-        naturalH: state.preview.naturalH
-      },
-      ui: {
-        safeIn: safeIn.value,
-        bleedIn: bleedIn.value,
-        showGuides: showGuides.checked,
-        includeGuidesPdf: includeGuidesPdf.checked
-      },
-      texts: txt
-    };
+    return { leftPercent: lp, topPercent: tp };
   }
-  function applyDesign(data){
-    if(!data || data.version!==1) return;
-    sizeSelect.value = data.size || '24x30';
-    setSize(sizeSelect.value);
-    dpiSelect.value = String(data.dpi || 300);
-    setDpi(dpiSelect.value);
-
-    Object.assign(state.preview, {
-      isLocal: !!data.preview?.isLocal,
-      bgSmall: data.preview?.small || DEFAULT_BG[state.size].small,
-      bgLarge: data.preview?.large || data.preview?.small || DEFAULT_BG[state.size].large,
-      naturalW: data.preview?.naturalW || null,
-      naturalH: data.preview?.naturalH || null
-    });
-    applyPreviewBg();
-
-    safeIn.value = data.ui?.safeIn || '0.25';
-    bleedIn.value= data.ui?.bleedIn || '0.125';
-    showGuides.checked = !!data.ui?.showGuides;
-    includeGuidesPdf.checked = !!data.ui?.includeGuidesPdf;
-    [trimGuide, safeGuide, bleedGuide].forEach(el=> el.classList.toggle('hidden', !showGuides.checked));
-    if(showGuides.checked) layoutGuides();
-
-    Object.keys(texts).forEach(id=>{
-      const el=texts[id]; const t=data.texts?.[id]; if(!t) return;
-      el.innerText = t.content || el.innerText;
-      el.style.fontSize = t.style?.fontSize || el.style.fontSize;
-      el.style.color = t.style?.color || el.style.color;
-      el.style.fontWeight = t.style?.fontWeight || el.style.fontWeight;
-      el.style.fontStyle = t.style?.fontStyle || el.style.fontStyle;
-      el.style.textDecoration = t.style?.textDecoration || el.style.textDecoration;
-      el.style.textAlign = t.style?.textAlign || el.style.textAlign;
-      el.style.fontFamily = t.style?.fontFamily || el.style.fontFamily;
-
-      const lp = parseFloat(t.pos?.leftPercent||'');
-      const tp = parseFloat(t.pos?.topPercent||'');
-      if(!Number.isNaN(lp) && !Number.isNaN(tp)){
-        el.style.left = `${lp}%`; el.style.top = `${tp}%`;
-        el.dataset.leftPercent = String(lp); el.dataset.topPercent = String(tp);
-      } else {
-        normalizePercentPosition(el, previewStage);
+  function normalizePercentPosition(el, boundary){
+    const b=boundary.getBoundingClientRect();
+    let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
+    if(Number.isNaN(lp) || Number.isNaN(tp)){
+      const r=el.getBoundingClientRect();
+      lp = ((r.left - b.left)/b.width) * 100;
+      tp = ((r.top  - b.top )/b.height)* 100;
+    }
+    el.style.left = `${lp}%`; el.style.top = `${tp}%`;
+    el.dataset.leftPercent = lp.toFixed(6); el.dataset.topPercent = tp.toFixed(6);
+  }
+  function clampPositionsToStage(){
+    const b=previewStage.getBoundingClientRect();
+    for(const el of Object.values(texts)){
+      const r=el.getBoundingClientRect();
+      let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
+      if(Number.isNaN(lp) || Number.isNaN(tp)){
+        const p=getInlineLeftTop(el, b); lp=p.leftPercent; tp=p.topPercent;
       }
-
-      const s=parseInt(t.shadow?.s||'0',10);
-      const bl=parseFloat(t.shadow?.blur||'0');
-      const col=t.shadow?.color||'#000';
-      el.dataset.shadowS = String(s);
-      el.dataset.shadowBlur = String(bl);
-      el.dataset.shadowColor = col;
-      const off=Math.round(s/10)||0;
-      el.style.textShadow = s===0 ? 'none' : `${off}px ${off}px ${bl}px ${col}`;
-    });
-
-    status('Design loaded.');
+      const maxLeftP = Math.max(0, (b.width  - r.width ) / b.width  * 100);
+      const maxTopP  = Math.max(0, (b.height - r.height) / b.height * 100);
+      lp = Math.min(Math.max(lp, 0), maxLeftP);
+      tp = Math.min(Math.max(tp, 0), maxTopP);
+      el.style.left = `${lp}%`; el.style.top  = `${tp}%`;
+      el.dataset.leftPercent = lp.toFixed(6); el.dataset.topPercent = tp.toFixed(6);
+    }
   }
-  btnSave.addEventListener('click', ()=>{
-    try{
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(collectDesign()));
-      status('Design saved to this browser (localStorage).');
-    }catch(e){ alert('Save failed (quota exceeded?)'); }
-  });
-  btnLoad.addEventListener('click', ()=>{
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw){ alert('No saved design found.'); return; }
-      applyDesign(JSON.parse(raw));
-    }catch(e){ alert('Load failed (corrupted data).'); }
-  });
-  btnClear.addEventListener('click', ()=>{
-    localStorage.removeItem(STORAGE_KEY);
-    status('Saved design cleared.');
+
+  // Patch 5: Keyboard micro-adjust (Shift = 5px)
+  document.addEventListener('keydown', (e)=>{
+    const el = texts[state.activeTextId]; if (!el) return;
+    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
+    e.preventDefault();
+    const step = e.shiftKey ? 5 : 1;
+    const b = previewStage.getBoundingClientRect();
+    let lp = parseFloat(el.dataset.leftPercent||'0');
+    let tp = parseFloat(el.dataset.topPercent ||'0');
+
+    if (e.key === 'ArrowLeft')  { lp -= (step / b.width)  * 100; }
+    if (e.key === 'ArrowRight') { lp += (step / b.width)  * 100; }
+    if (e.key === 'ArrowUp')    { tp -= (step / b.height) * 100; }
+    if (e.key === 'ArrowDown')  { tp += (step / b.height) * 100; }
+
+    lp = Math.max(0, Math.min(lp, 100));
+    tp = Math.max(0, Math.min(tp, 100));
+    el.style.left = `${lp}%`; el.style.top = `${tp}%`;
+    el.dataset.leftPercent = lp.toFixed(6);
+    el.dataset.topPercent  = tp.toFixed(6);
+    clampPositionsToStage();
   });
 
-  // ===================== Controls wiring =====================
-  sizeSelect.addEventListener('change',e=>setSize(e.target.value));
-  dpiSelect.addEventListener('change',e=>setDpi(e.target.value));
-  guideSelect.addEventListener('change',e=>{
-    const on=e.target.value==='on';
-    guideH.classList.toggle('hidden',!on);
-    guideV.classList.toggle('hidden',!on);
+  // Patch 6: Inline editing (dblclick / long-press; Esc/blur to exit)
+  ['t1','t2','t3'].forEach(id=>{
+    const el = texts[id];
+    let pressTimer = null;
+    const enterEdit = ()=>{
+      if (el.classList.contains('editing')) return;
+      el.classList.add('editing');
+      el.contentEditable = 'true';
+      el.focus();
+    };
+    const exitEdit = ()=>{
+      if (!el.classList.contains('editing')) return;
+      el.classList.remove('editing');
+      el.contentEditable = 'false';
+      loadTextEditorFrom(id);
+      normalizePercentPosition(el, previewStage);
+    };
+    el.addEventListener('dblclick', (e)=>{ e.preventDefault(); enterEdit(); });
+    el.addEventListener('touchstart', (e)=>{ pressTimer = setTimeout(()=> enterEdit(), 600); }, {passive:true});
+    el.addEventListener('touchend', ()=> clearTimeout(pressTimer));
+    el.addEventListener('touchmove', ()=> clearTimeout(pressTimer));
+    el.addEventListener('blur', exitEdit);
+    el.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { e.preventDefault(); el.blur(); } });
   });
 
-  document.querySelectorAll('.pickTarget').forEach(btn=>{
-    btn.addEventListener('click',()=> setActiveText(btn.dataset.target));
-  });
-
-  // ===================== First render =====================
+  // First render
   t1.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
   t2.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
   t3.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
@@ -1051,4 +981,3 @@ function applyLayout(name){
   </script>
 </body>
 </html>
-
