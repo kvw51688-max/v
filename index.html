@@ -23,15 +23,24 @@
     @font-face { font-family: 'Inter'; src: url('fonts/inter/inter-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Inter'; src: url('fonts/inter/inter-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
 
-    @font-face { font-family: 'Roboto'; src: url('fonts/roboto/roboto-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Open Sans'; src: url('fonts/open-sans/opensans-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Montserrat'; src: url('fonts/montserrat/montserrat-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Poppins'; src: url('fonts/poppins/poppins-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    
+    
+    
+    
 
     @font-face { font-family: 'Great Vibes'; src: url('fonts/handwriting/great-vibes-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Dancing Script'; src: url('fonts/handwriting/dancing-script-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Pacifico'; src: url('fonts/handwriting/pacifico-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Caveat'; src: url('fonts/handwriting/caveat-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Baloo2'; src: url('fonts/baloo2/baloo2-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Bangers'; src: url('fonts/bangers/bangers-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Chewy'; src: url('fonts/chewy/chewy-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Creepster'; src: url('fonts/creepster/creepster-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'DM Serif Display'; src: url('fonts/dmserifdisplay/dmserifdisplay-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Manrope'; src: url('fonts/manrope/manrope-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Noto Sans Display'; src: url('fonts/notosansdisplay/notosansdisplay-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Playfair Display'; src: url('fonts/playfairdisplay/playfairdisplay-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+
 
     .draggable{ position:absolute; cursor:move; user-select:none; touch-action:none; white-space:pre-wrap; line-height:1.15; transition: box-shadow .15s ease, outline-color .15s ease, outline-offset .15s ease; }
     .draggable.active{ outline:2px dashed #6366f1; outline-offset:2px; }
@@ -184,22 +193,22 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block text-xs mb-1">Font family</label>
-              <select id="fontFamily" class="w-full border rounded px-2 py-1 text-sm">
-                <option value="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Inter (Sans)</option>
-                <option value="'Roboto', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Roboto (Sans)</option>
-                <option value="'Open Sans', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Open Sans (Sans)</option>
-                <option value="'Lato', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Lato (Sans)</option>
-                <option value="'Montserrat', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Montserrat (Sans)</option>
-                <option value="'Poppins', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Poppins (Sans)</option>
-                <option value="'Nunito', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Nunito (Sans)</option>
-                <option value="'Source Sans 3', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Source Sans 3 (Sans)</option>
-                <option value="'Ubuntu', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Ubuntu (Sans)</option>
-                <option value="'Noto Sans', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Noto Sans (Sans)</option>
-                <option value="'Caveat', 'Comic Sans MS', cursive">Caveat (Handwriting)</option>
-                <option value="'Pacifico', 'Comic Sans MS', cursive">Pacifico (Handwriting)</option>
-                <option value="'Dancing Script', 'Comic Sans MS', cursive">Dancing Script (Handwriting)</option>
-                <option value="'Great Vibes', 'Comic Sans MS', cursive">Great Vibes (Handwriting)</option>
-              </select>
+              
+<select id="fontFamily" class="w-full border rounded px-2 py-1 text-sm">
+  <option value="'Inter', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Inter (Sans)</option>
+  <option value="'Baloo2', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Baloo2 (Rounded Sans)</option>
+  <option value="'Bangers', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Bangers (Display)</option>
+  <option value="'Chewy', 'Comic Sans MS', cursive">Chewy (Handwriting)</option>
+  <option value="'Creepster', 'Comic Sans MS', cursive">Creepster (Display)</option>
+  <option value="'DM Serif Display', serif">DM Serif Display (Serif)</option>
+  <option value="'Manrope', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Manrope (Sans)</option>
+  <option value="'Noto Sans Display', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Noto Sans Display (Sans)</option>
+  <option value="'Playfair Display', serif">Playfair Display (Serif)</option>
+  <option value="'Pacifico', 'Comic Sans MS', cursive">Pacifico (Handwriting)</option>
+  <option value="'Dancing Script', 'Comic Sans MS', cursive">Dancing Script (Handwriting)</option>
+  <option value="'Great Vibes', 'Comic Sans MS', cursive">Great Vibes (Handwriting)</option>
+</select>
+
             </div>
             <div class="flex flex-wrap items-center gap-2 text-xs">
               <label class="inline-flex items-center gap-1 mt-6"><input type="checkbox" id="bold"> Bold</label>
@@ -982,4 +991,3 @@
   </script>
 </body>
 </html>
-
