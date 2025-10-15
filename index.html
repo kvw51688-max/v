@@ -209,7 +209,6 @@
             <div>
               <label class="block text-xs mb-1">Font family</label>
               <select id="fontFamily" class="w-full border rounded px-2 py-1 text-sm">
-  <!-- 保留你已有的，其它按需增删 -->
                 <option value="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Inter</option>
                 <option value="'Baloo 2', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Baloo 2</option>
                 <option value="'Bangers', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Bangers</option>
@@ -312,16 +311,19 @@
   <div id="printStage"></div>
 
   <script>
+    
   const DEFAULT_BG = {
-    '24x30': { small: '${ASSET_BASE}24-30-1.webp`, large: `${ASSET_BASE}24-30-1.png' },
-    '24x50': { small: '${ASSET_BASE}24-50-1.webp`, large: `${ASSET_BASE}24-50-1.png' }
+    '24x30': { small: `${ASSET_BASE}24-30-1.webp`, large: `${ASSET_BASE}24-30-1.png` },
+    '24x50': { small: `${ASSET_BASE}24-50-1.webp`, large: `${ASSET_BASE}24-50-1.png` }
   };
+
   const ASSET_LIBRARY = [
     { id:'lib-2430-1', label:'24×30 – BG #1', size:'24x30',
-      small:'${ASSET_BASE}24-30-1.webp`, large:`${ASSET_BASE}24-30-1.png`, naturalW:3600, naturalH:4500 },
+      small:`${ASSET_BASE}24-30-1.webp`, large:`${ASSET_BASE}24-30-1.png`, naturalW:3600, naturalH:4500 },
     { id:'lib-2450-1', label:'24×50 – BG #1', size:'24x50',
-      small:'${ASSET_BASE}24-50-1.webp`, large:`${ASSET_BASE}24-50-1.png`, naturalW:4800, naturalH:10000 }
+      small:`${ASSET_BASE}24-50-1.webp`, large:`${ASSET_BASE}24-50-1.png`, naturalW:4800, naturalH:10000 },
   ];
+
   const PAGE_SIZE = 12;
 
   const state = {
@@ -1005,4 +1007,5 @@
   </script>
 </body>
 </html>
+
 
