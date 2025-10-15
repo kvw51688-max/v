@@ -489,6 +489,7 @@
     status('Background reset to default.');
   });
 
+  let currentLayoutName = 'centered';  
   const layoutTemplates = {
     centered: [
       { id:'t1', left:'50%', top:'20%', align:'center' },
@@ -509,17 +510,37 @@
   function applyLayout(name){
     const tpl = layoutTemplates[name];
     if(!tpl) return;
+    // record current layout & responsive params (for bottomRight mobile fix)
+currentLayoutName = name;
+const isMobileNarrow = previewStage.clientWidth <= 480; // detect mobile
+const BR_WIDTH_PCT = isMobileNarrow ? 82 : 40;          // content width (%)
+const BR_MARGIN_RIGHT_PCT = isMobileNarrow ? 6 : 4;     // right safe margin (%)
     tpl.forEach(t=>{
       const el = document.getElementById(t.id);
       el.style.left = t.left;
       el.style.top = t.top;
       el.style.textAlign = t.align;
       el.style.transform = (t.align === 'center') ? 'translateX(-50%)' : 'none';
+      // --- bottomRight mobile fix: fixed box width at right side, let text wrap ---
+if (name === 'bottomRight') {
+  el.style.maxWidth = BR_WIDTH_PCT + '%';
+  el.style.width    = BR_WIDTH_PCT + '%';
+  el.style.whiteSpace = 'pre-wrap';
+
+  const leftPercent = 100 - BR_MARGIN_RIGHT_PCT - BR_WIDTH_PCT;
+  el.style.left = leftPercent + '%';
+  el.style.transform = 'none';
+  el.style.textAlign = 'right';
+
+  el.dataset.leftPercent = leftPercent.toFixed(6);
+}
 
       const b = previewStage.getBoundingClientRect();
       const leftP = (String(t.left).trim().endsWith('%')) ? parseFloat(t.left) : (parseFloat(t.left) / b.width) * 100;
       const topP  = (String(t.top).trim().endsWith('%'))  ? parseFloat(t.top)  : (parseFloat(t.top)  / b.height)* 100;
+      if (name !== 'bottomRight') {
       el.dataset.leftPercent = isFinite(leftP) ? leftP.toFixed(6) : el.dataset.leftPercent;
+}
       el.dataset.topPercent  = isFinite(topP)  ? topP.toFixed(6)  : el.dataset.topPercent;
     });
     clampPositionsToStage();
@@ -722,6 +743,7 @@ guideSelect.addEventListener('change', () => {
   window.addEventListener('resize', ()=>{
     layoutGuides();
     clampPositionsToStage();
+    applyLayout(currentLayoutName);
   });
 
   function layoutGuides(){
@@ -1017,5 +1039,6 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
   </script>
 </body>
 </html>
+
 
 
