@@ -19,18 +19,43 @@
   <link rel="preload" href="fonts/montserrat/montserrat-400.woff2" as="font" type="font/woff2" crossorigin>
 
   <style>
-    @font-face { font-family: 'Inter'; src: url('fonts/inter/inter-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Inter'; src: url('fonts/inter/inter-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Inter';src: url('fonts/inter/Inter-Regular.woff2') format('woff2');font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Inter';src: url('fonts/inter/Inter-Bold.woff2') format('woff2');font-weight: 700; font-style: normal; font-display: swap; }
 
-    @font-face { font-family: 'Roboto'; src: url('fonts/roboto/roboto-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Open Sans'; src: url('fonts/open-sans/opensans-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Montserrat'; src: url('fonts/montserrat/montserrat-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Poppins'; src: url('fonts/poppins/poppins-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+/* Baloo 2（目录 baloo2） */
+    @font-face { font-family: 'Baloo 2';src: url('fonts/baloo2/Baloo2-Regular.woff2') format('woff2');font-weight: 400; font-style: normal; font-display: swap; }
 
-    @font-face { font-family: 'Great Vibes'; src: url('fonts/handwriting/great-vibes-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Dancing Script'; src: url('fonts/handwriting/dancing-script-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Pacifico'; src: url('fonts/handwriting/pacifico-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Caveat'; src: url('fonts/handwriting/caveat-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+/* Bangers */
+    @font-face { font-family: 'Bangers';src: url('fonts/bangers/Bangers-Regular.woff2') format('woff2');font-weight: 400; font-style: normal; font-display: swap; }
+
+/* Chewy */
+    @font-face { font-family: 'Chewy';src: url('fonts/chewy/Chewy-Regular.woff2') format('woff2');font-weight: 400; font-style: normal; font-display: swap; }
+
+/* Creepster */
+    @font-face { font-family: 'Creepster';src: url('fonts/creepster/Creepster-Regular.woff2') format('woff2');font-weight: 400; font-style: normal; font-display: swap; }
+
+/* Dancing Script（目录 dancingscript，这里用常见粗体） */
+    @font-face { font-family: 'Dancing Script';src: url('fonts/dancingscript/DancingScript-Bold.woff2') format('woff2');font-weight: 700; font-style: normal; font-display: swap; }
+
+/* DM Serif Display（目录 dmserifdisplay） */
+    @font-face { font-family: 'DM Serif Display';src: url('fonts/dmserifdisplay/DMSerifDisplay-Regular.woff2') format('woff2');font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'DM Serif Display';src: url('fonts/dmserifdisplay/DMSerifDisplay-Italic.woff2') format('woff2');font-weight: 400; font-style: italic; font-display: swap; }
+
+/* Great Vibes（目录 greatvibes） */
+    @font-face { font-family: 'Great Vibes';src: url('fonts/greatvibes/GreatVibes-Regular.woff2') format('woff2');font-weight: 400; font-style: normal; font-display: swap; }
+
+/* Manrope */
+    @font-face { font-family: 'Manrope';src: url('fonts/manrope/Manrope-Regular.woff2') format('woff2');font-weight: 400; font-style: normal; font-display: swap; }
+
+/* Noto Sans Display（目录 notosansdisplay） */
+    @font-face { font-family: 'Noto Sans Display';src: url('fonts/notosansdisplay/NotoSansDisplay-Regular.woff2') format('woff2');font-weight: 400; font-style: normal; font-display: swap; }
+
+/* Pacifico */
+    @font-face { font-family: 'Pacifico';src: url('fonts/pacifico/Pacifico-Regular.woff2') format('woff2');font-weight: 400; font-style: normal; font-display: swap; }
+
+/* Playfair Display（目录 playfairdisplay） */
+    @font-face { font-family: 'Playfair Display';src: url('fonts/playfairdisplay/PlayfairDisplay-Regular.woff2') format('woff2');font-weight: 400; font-style: normal; font-display: swap; }
+
 
     .draggable{ position:absolute; cursor:move; user-select:none; touch-action:none; white-space:pre-wrap; line-height:1.15; transition: box-shadow .15s ease, outline-color .15s ease, outline-offset .15s ease; }
     .draggable.active{ outline:2px dashed #6366f1; outline-offset:2px; }
@@ -184,20 +209,19 @@
             <div>
               <label class="block text-xs mb-1">Font family</label>
               <select id="fontFamily" class="w-full border rounded px-2 py-1 text-sm">
-                <option value="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Inter (Sans)</option>
-                <option value="'Roboto', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Roboto (Sans)</option>
-                <option value="'Open Sans', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Open Sans (Sans)</option>
-                <option value="'Lato', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Lato (Sans)</option>
-                <option value="'Montserrat', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Montserrat (Sans)</option>
-                <option value="'Poppins', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Poppins (Sans)</option>
-                <option value="'Nunito', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Nunito (Sans)</option>
-                <option value="'Source Sans 3', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Source Sans 3 (Sans)</option>
-                <option value="'Ubuntu', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Ubuntu (Sans)</option>
-                <option value="'Noto Sans', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Noto Sans (Sans)</option>
-                <option value="'Caveat', 'Comic Sans MS', cursive">Caveat (Handwriting)</option>
-                <option value="'Pacifico', 'Comic Sans MS', cursive">Pacifico (Handwriting)</option>
-                <option value="'Dancing Script', 'Comic Sans MS', cursive">Dancing Script (Handwriting)</option>
-                <option value="'Great Vibes', 'Comic Sans MS', cursive">Great Vibes (Handwriting)</option>
+  <!-- 保留你已有的，其它按需增删 -->
+                <option value="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Inter</option>
+                <option value="'Baloo 2', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Baloo 2</option>
+                <option value="'Bangers', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Bangers</option>
+                <option value="'Chewy', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Chewy</option>
+                <option value="'Creepster', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Creepster</option>
+                <option value="'Dancing Script', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Dancing Script</option>
+                <option value="'DM Serif Display', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">DM Serif Display</option>
+                <option value="'Great Vibes', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Great Vibes</option>
+                <option value="'Manrope', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Manrope</option>
+                <option value="'Noto Sans Display', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Noto Sans Display</option>
+                <option value="'Pacifico', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Pacifico</option>
+                <option value="'Playfair Display', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">Playfair Display</option>
               </select>
             </div>
             <div class="flex flex-wrap items-center gap-2 text-xs">
@@ -289,14 +313,14 @@
 
   <script>
   const DEFAULT_BG = {
-    '24x30': { small: 'assets/24-30-1.webp', large: 'assets/24-30-1.png' },
-    '24x50': { small: 'assets/24-50-1.webp', large: 'assets/24-50-1.png' }
+    '24x30': { small: '${ASSET_BASE}24-30-1.webp`, large: `${ASSET_BASE}24-30-1.png' },
+    '24x50': { small: '${ASSET_BASE}24-50-1.webp`, large: `${ASSET_BASE}24-50-1.png' }
   };
   const ASSET_LIBRARY = [
     { id:'lib-2430-1', label:'24×30 – BG #1', size:'24x30',
-      small:'assets/24-30-1.webp', large:'assets/24-30-1.png', naturalW: 3600, naturalH: 4500 },
+      small:'${ASSET_BASE}24-30-1.webp`, large:`${ASSET_BASE}24-30-1.png`, naturalW:3600, naturalH:4500 },
     { id:'lib-2450-1', label:'24×50 – BG #1', size:'24x50',
-      small:'assets/24-50-1.webp', large:'assets/24-50-1.png', naturalW: 4800, naturalH: 10000 }
+      small:'${ASSET_BASE}24-50-1.webp`, large:`${ASSET_BASE}24-50-1.png`, naturalW:4800, naturalH:10000 }
   ];
   const PAGE_SIZE = 12;
 
@@ -981,3 +1005,4 @@
   </script>
 </body>
 </html>
+
