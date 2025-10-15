@@ -12,7 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
-  <!-- ✅ Local Fonts preloads (请将对应的 woff2 文件放到仓库 /fonts 目录) -->
+  <!-- ✅ Local Fonts preloads (place corresponding woff2 files under /fonts) -->
   <link rel="preload" href="/fonts/inter/inter-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/inter/inter-700.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/roboto/roboto-400.woff2" as="font" type="font/woff2" crossorigin>
@@ -20,77 +20,26 @@
 
   <style>
     /* ===================== Local Font Faces ===================== */
-    /* 仅示例常用权重，按需增补；未放置的字体会回退系统字体 */
-    @font-face {
-      font-family: 'Inter';
-      src: url('/fonts/inter/inter-400.woff2') format('woff2');
-      font-weight: 400; font-style: normal; font-display: swap;
-    }
-    @font-face {
-      font-family: 'Inter';
-      src: url('/fonts/inter/inter-700.woff2') format('woff2');
-      font-weight: 700; font-style: normal; font-display: swap;
-    }
+    @font-face { font-family: 'Inter'; src: url('/fonts/inter/inter-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Inter'; src: url('/fonts/inter/inter-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
 
-    @font-face {
-      font-family: 'Roboto';
-      src: url('/fonts/roboto/roboto-400.woff2') format('woff2');
-      font-weight: 400; font-style: normal; font-display: swap;
-    }
-    @font-face {
-      font-family: 'Open Sans';
-      src: url('/fonts/open-sans/opensans-400.woff2') format('woff2');
-      font-weight: 400; font-style: normal; font-display: swap;
-    }
-    @font-face {
-      font-family: 'Montserrat';
-      src: url('/fonts/montserrat/montserrat-400.woff2') format('woff2');
-      font-weight: 400; font-style: normal; font-display: swap;
-    }
-    @font-face {
-      font-family: 'Poppins';
-      src: url('/fonts/poppins/poppins-400.woff2') format('woff2');
-      font-weight: 400; font-style: normal; font-display: swap;
-    }
+    @font-face { font-family: 'Roboto'; src: url('/fonts/roboto/roboto-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Open Sans'; src: url('/fonts/open-sans/opensans-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Montserrat'; src: url('/fonts/montserrat/montserrat-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Poppins'; src: url('/fonts/poppins/poppins-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
 
-    /* 手写体（婚礼等场景常用） */
-    @font-face {
-      font-family: 'Great Vibes';
-      src: url('/fonts/handwriting/great-vibes-400.woff2') format('woff2');
-      font-weight: 400; font-style: normal; font-display: swap;
-    }
-    @font-face {
-      font-family: 'Dancing Script';
-      src: url('/fonts/handwriting/dancing-script-700.woff2') format('woff2');
-      font-weight: 700; font-style: normal; font-display: swap;
-    }
-    @font-face {
-      font-family: 'Pacifico';
-      src: url('/fonts/handwriting/pacifico-400.woff2') format('woff2');
-      font-weight: 400; font-style: normal; font-display: swap;
-    }
-    @font-face {
-      font-family: 'Caveat';
-      src: url('/fonts/handwriting/caveat-700.woff2') format('woff2');
-      font-weight: 700; font-style: normal; font-display: swap;
-    }
+    /* Handwriting (wedding etc.) */
+    @font-face { font-family: 'Great Vibes'; src: url('/fonts/handwriting/great-vibes-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Dancing Script'; src: url('/fonts/handwriting/dancing-script-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Pacifico'; src: url('/fonts/handwriting/pacifico-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Caveat'; src: url('/fonts/handwriting/caveat-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
 
     /* ===================== App Styles ===================== */
-    .draggable{
-      position:absolute; cursor:move; user-select:none; touch-action:none;
-      white-space:pre-wrap; line-height:1.15;
-      transition: box-shadow .15s ease, outline-color .15s ease, outline-offset .15s ease;
-    }
+    .draggable{ position:absolute; cursor:move; user-select:none; touch-action:none; white-space:pre-wrap; line-height:1.15; transition: box-shadow .15s ease, outline-color .15s ease, outline-offset .15s ease; }
     .draggable.active{ outline:2px dashed #6366f1; outline-offset:2px; }
-    .draggable.editing{
-      cursor:text; outline:2px solid #6366f1; outline-offset:2px;
-      box-shadow: 0 0 0 4px rgba(99,102,241,.15);
-    }
+    .draggable.editing{ cursor:text; outline:2px solid #6366f1; outline-offset:2px; box-shadow: 0 0 0 4px rgba(99,102,241,.15); }
 
-    #previewStage{
-      width:100%; max-width:960px; margin:0 auto; aspect-ratio:4/5;
-      position:relative; background:#fff; border:1px dashed #cbd5e1; overflow:hidden;
-    }
+    #previewStage{ width:100%; max-width:960px; margin:0 auto; aspect-ratio:4/5; position:relative; background:#fff; border:1px dashed #cbd5e1; overflow:hidden; }
     #previewBgWrap{ position:absolute; inset:0; overflow:hidden; background:#f3f4f6; }
     #previewBgImg{ width:100%; height:100%; object-fit:cover; display:block; }
 
@@ -107,10 +56,16 @@
     :root{ --ab-h: 88px; }
     @media (min-width:1024px){ :root{ --ab-h: 0px; } }
 
+    /* ✅ FIX: make status message inline so it never blocks footer buttons */
     #statusMsg{
-      position: fixed; left: 12px; bottom: 12px; z-index: 40;
-      background: rgba(17,24,39,0.9); color: white; padding: 8px 10px; border-radius: 10px;
+      position: static; /* was fixed */
+      background: transparent; /* remove dark bubble */
+      color: #64748b;
+      padding: 0;
+      border-radius: 0;
       font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      pointer-events: none; /* never intercept taps */
+      z-index: 10; /* below footer */
     }
 
     footer { border-top:1px solid #e2e8f0; background:#fff; font-size:12px; color:#64748b; }
@@ -120,11 +75,10 @@
 </head>
 <body class="bg-slate-50 text-slate-800">
   <!-- ✅ iOS Download Notice (shown only on iOS, can be closed) -->
-<div id="iosNotice" class="hidden bg-yellow-50 text-yellow-900 text-sm px-4 py-2">
-  Notice: Detected iOS device. If the downloaded file appears blank or fails to export, please try setting the DPI to 200,
-  or <b>use a computer</b> to export again.
-  <button id="closeIosNotice" class="float-right text-yellow-800 hover:underline">Close</button>
-</div>
+  <div id="iosNotice" class="hidden bg-yellow-50 text-yellow-900 text-sm px-4 py-2">
+    Notice: Detected iOS device. If the downloaded print file fails or appears blank, please try setting DPI to 200, or <b>use a computer</b> to export again.
+    <button id="closeIosNotice" class="float-right text-yellow-800 hover:underline">Close</button>
+  </div>
 
   <!-- Header -->
   <header class="border-b bg-white sticky top-0 z-30">
@@ -159,9 +113,9 @@
         <div id="safeGuide"  class="guide-safe  hidden export-ignore" aria-hidden="true"></div>
 
         <!-- Draggable texts -->
-        <div id="t1" class="draggable text-3xl font-bold" style="left:10%; top:10%;">MAIN TITLE</div>
-        <div id="t2" class="draggable text-xl" style="left:10%; top:25%;">Subtitle goes here</div>
-        <div id="t3" class="draggable text-base" style="left:10%; top:40%;">Description or notes</div>
+        <div id="t1" class="draggable text-3xl font-bold" style="left:50%; top:20%; transform:translateX(-50%); text-align:center;">MAIN TITLE</div>
+        <div id="t2" class="draggable text-xl" style="left:50%; top:35%; transform:translateX(-50%); text-align:center;">Subtitle goes here</div>
+        <div id="t3" class="draggable text-base" style="left:50%; top:50%; transform:translateX(-50%); text-align:center;">Description or notes</div>
       </div>
 
       <div class="mt-3 text-xs md:text-sm text-slate-600" id="specInfo"></div>
@@ -330,7 +284,7 @@
   </main>
 
   <!-- Footer (actions) -->
-  <footer class="fixed bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur z-40" id="actionBar">
+  <footer class="fixed bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur z-50" id="actionBar">
     <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
       <div class="flex items-center gap-2 text-xs md:text-sm">
         <span class="text-slate-600" id="statusMsg">Ready.</span>
@@ -449,7 +403,7 @@
   function rgbToHex(rgb){ const m=rgb.match(/\d+/g); if(!m) return '#000000'; const [r,g,b]=m.map(Number); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
   async function ensureFontsReady(){ if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch(_){} } }
 
-  // iOS 顶部提示条逻辑
+  // iOS top notice
   (function(){
     if(isIOS()){
       iosNotice.classList.remove('hidden');
@@ -605,7 +559,7 @@
     fontColor.value=rgbToStyleHex(cs.color);
     const fam=cs.fontFamily;
     const opts=Array.from(fontFamily.options);
-    const found=opts.find(o=>fam.toLowerCase().includes(o.value.split(',')[0].replace(/['"]/g,'').toLowerCase()));
+    const found=opts.find(o=>fam.toLowerCase().includes(o.value.split(',')[0].replace(/["']/g,'').toLowerCase()));
     if(found) fontFamily.value=found.value;
     bold.checked=cs.fontWeight==='700'||parseInt(cs.fontWeight,10)>=600;
     italic.checked=cs.fontStyle==='italic';
@@ -811,10 +765,10 @@
   function handleExportError(e){
     console.error(e);
     if(isIOS()){
-  alert('Export failed or blank file:\n• Please select 200 DPI from the "Print DPI" dropdown and try again;\n• Or use a computer to export the file again.');
-}else{
-  alert('Export failed. Try 200 DPI or a smaller image. If the issue persists, try on a desktop.');
-}
+      alert('Export failed or blank file:\n• Please select 200 DPI from the "Print DPI" dropdown and try again;\n• Or use a computer to export the file again.');
+    }else{
+      alert('Export failed. Try 200 DPI or a smaller image. If the issue persists, try on a desktop.');
+    }
   }
 
   async function renderPrintCanvas(includeGuides){
@@ -893,7 +847,7 @@
     el.textContent = 'Working...';
     el.classList.add('opacity-70','cursor-wait');
     try { await fn(); }
-    catch(e){ /* 已在内部处理 */ }
+    catch(e){ /* handled above */ }
     finally{
       el.disabled = false;
       el.textContent = old;
