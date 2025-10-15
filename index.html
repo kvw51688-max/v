@@ -178,6 +178,17 @@
             Tip: Thumbnails are lazy-loaded. Print uses original at 300/200 dpi. Local uploads are embedded.
           </p>
         </div>
+        
+<!-- ==================== 插入这里：布局模板按钮区 START ==================== -->
+        <div class="space-y-1">
+          <label class="block text-sm font-medium mb-1">Text Layout Template</label>
+          <div class="flex flex-wrap gap-2 text-xs">
+              <button class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200" onclick="applyLayout('centered')">Centered</button>
+              <button class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200" onclick="applyLayout('topLeft')">Top Left</button>
+              <button class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200" onclick="applyLayout('bottomRight')">Bottom Right</button>
+            </div>
+          </div>
+<!-- ==================== 插入这里：布局模板按钮区 END ==================== -->
 
         <!-- Text editor -->
         <div class="space-y-3">
@@ -540,6 +551,41 @@
     applyPreviewBg();
     status('Background reset to default.');
   });
+
+    // ==================== 插入这里：布局模板逻辑 START ====================
+// 预设三种布局模板
+const layoutTemplates = {
+  centered: [
+    { id:'t1', left:'50%', top:'20%', align:'center' },
+    { id:'t2', left:'50%', top:'35%', align:'center' },
+    { id:'t3', left:'50%', top:'50%', align:'center' },
+  ],
+  topLeft: [
+    { id:'t1', left:'10%', top:'10%', align:'left' },
+    { id:'t2', left:'10%', top:'25%', align:'left' },
+    { id:'t3', left:'10%', top:'40%', align:'left' },
+  ],
+  bottomRight: [
+    { id:'t1', left:'60%', top:'65%', align:'right' },
+    { id:'t2', left:'60%', top:'75%', align:'right' },
+    { id:'t3', left:'60%', top:'85%', align:'right' },
+  ]
+};
+
+// 一键应用模板函数
+function applyLayout(name){
+  const tpl = layoutTemplates[name];
+  if(!tpl) return;
+  tpl.forEach(t=>{
+    const el = document.getElementById(t.id);
+    el.style.left = t.left;
+    el.style.top = t.top;
+    el.style.textAlign = t.align;
+    el.style.transform = (t.align === 'center') ? 'translateX(-50%)' : 'none';
+  });
+  status(`Applied layout: ${name}`);
+}
+// ==================== 插入这里：布局模板逻辑 END ====================
 
   // ===================== Text Editing =====================
   function setActiveText(id){
@@ -1005,3 +1051,4 @@
   </script>
 </body>
 </html>
+
