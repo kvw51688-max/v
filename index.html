@@ -10,14 +10,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- html2canvas & jsPDF -->
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <link rel="preload" href="fonts/inter/inter-regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/bangers/bangers-regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/playfairdisplay/playfairdisplay-regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/baloo2/baloo2-regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/manrope/manrope-regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/pacifico/pacifico-regular.woff2" as="font" type="font/woff2" crossorigin>
 <!-- Local Fonts preloads (relative paths; safe for GitHub Pages subpaths) -->
 
   <style>
@@ -293,7 +286,11 @@
   <!-- ===== Brand Store Highlight Section (export-ignore) ===== -->
 <div class="export-ignore text-center py-6 bg-blue-50 border-t border-blue-200">
 <p class="text-base md:text-lg font-semibold text-gray-700 flex justify-center items-center gap-2">
-  <img src="assets/logo.png" alt="Lerine Studio" class="h-6 w-6">
+  <img src="assets/logo.png"
+        alt="Lerine Studio"
+        class="h-6 w-6"
+        width="96" height="96"
+        loading="lazy">
   <span>Explore more at</span>
   <a href="https://www.yourstorelink.com"
      target="_blank" rel="noopener noreferrer"
@@ -404,7 +401,6 @@
   const closeIosNotice = document.getElementById('closeIosNotice');
 
   function status(msg){ statusMsg.textContent=msg; }
-  function parsePercent(v){ if(!v) return NaN; if(String(v).trim().endsWith('%')) return parseFloat(v); return NaN; }
   function isIOS(){ return /iP(hone|ad|od)/i.test(navigator.userAgent); }
   function lockScroll(){ document.body.style.overflow='hidden'; }
   function unlockScroll(){ document.body.style.overflow=''; }
@@ -1098,14 +1094,8 @@ guideSelect.addEventListener('change', () => {
 // Font load quick check
 try { for (const f of document.fonts) { console.log('[font]', f.family, f.status); } } catch(_) {}
   </script>
+<!-- Export & App Scripts (placed at end for faster first paint) -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
