@@ -1021,7 +1021,27 @@ if (r.width >= b.width) {
       el.style.width = (srec.width * sx) + 'px';
       el.style.overflowWrap = 'anywhere';
       el.style.wordBreak = 'break-word';
-      el.style.fontSize=(parseFloat(cs.fontSize)*k)+'px';
+      // —— 计算字号与行高（关键修复）——
+      const fsPx = parseFloat(cs.fontSize) || 16;     // 屏幕上的字号(px)
+      const lhCss = cs.lineHeight;
+
+      // 将“normal/无单位/px/%”统一为像素行高
+      let linePx;
+      if (lhCss === 'normal') {
+        linePx = fsPx * 1.3;                          // 略宽，避免挤行
+      } else if (lhCss.endsWith && lhCss.endsWith('px')) {
+        linePx = parseFloat(lhCss) || fsPx * 1.3;
+      } else {
+        const n = parseFloat(lhCss);                   // 无单位或百分比按倍数处理
+        linePx = Number.isFinite(n) ? fsPx * n : fsPx * 1.3;
+      }
+
+      // —— 使用与位置/宽度一致的缩放（sx）——
+      const outFontSize = fsPx * sx;
+      const outLinePx   = linePx * sx;
+
+      el.style.fontSize   = outFontSize + 'px';
+      el.style.lineHeight = outLinePx   + 'px';       // 用像素行高，避免高 DPI 叠行
       el.style.fontFamily=cs.fontFamily;
       el.style.color=cs.color;
       el.style.fontWeight=cs.fontWeight;
@@ -1029,7 +1049,6 @@ if (r.width >= b.width) {
       el.style.textDecoration=cs.textDecoration;
       el.style.textAlign=cs.textAlign;
       el.style.whiteSpace=cs.whiteSpace||'pre-wrap';
-      el.style.lineHeight=(cs.lineHeight==='normal'?'1.25':cs.lineHeight);
       let sds = parseInt(src.dataset.shadowS||'0',10);
       let sblur = parseFloat(src.dataset.shadowBlur||'0');
       let scolor = src.dataset.shadowColor || '#000';
@@ -1254,3 +1273,4 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
