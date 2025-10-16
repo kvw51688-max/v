@@ -675,337 +675,9 @@ document.querySelectorAll('.pickTarget').forEach(btn => {
     el.innerText=textContent.value;
     const wantedPx = parseInt(fontSize.value,10) || 36;
     // 取消上限：直接使用用户想要的字号
-    el.style.fontSize = `${wantedPx}px`;
-    el.style.lineHeight = '1.25';
+      el.textContent = src.textContent;
+      el.style.position = 'absolute';
 
-    // 允许大标题自动换行
-    const isMobileNarrow = previewStage.clientWidth <= 480;
-    const capPct = isMobileNarrow ? 96 : 92;     // 容器最大宽度百分比（可按需调整）
-    el.style.maxWidth = capPct + '%';
-    el.style.whiteSpace = 'pre-wrap';
-    el.style.wordBreak = 'break-word';
-    el.style.overflowWrap = 'anywhere';
-    el.style.color=fontColor.value;
-    el.style.fontWeight=bold.checked?'700':'400';
-    el.style.fontStyle=italic.checked?'italic':'normal';
-    el.style.textDecoration=underline.checked?'underline':'none';
-    el.style.textAlign=align.value;
-    el.style.fontFamily=fontFamily.value;
-    // Enforce 400 for families that only have 400 to avoid fake bold / fallback illusion
-(function enforceWeightFor400() {
-  try {
-    const famName = (fontFamily.value.split(',')[0] || '').replace(/['"]/g,'').trim();
-    const only400 = new Set([
-      'Baloo2','Bangers','Chewy','Creepster','DM Serif Display',
-      'Manrope','Noto Sans Display','Playfair Display','Pacifico',
-      'Dancing Script','Great Vibes'
-    ]);
-    if (only400.has(famName)) { el.style.fontWeight = '400'; }
-  } catch(_) {}
-})();
-    
-    const s=parseInt(shadowStrength.value,10)||0;
-    const bl=parseInt(shadowBlur.value,10)||0;
-    const off=Math.round(s/10)||0;
-    el.style.textShadow = s===0 ? 'none' : `${off}px ${off}px ${bl}px ${shadowColor.value}`;
-    el.dataset.shadowS=String(s);
-    el.dataset.shadowBlur=String(bl);
-    el.dataset.shadowColor=shadowColor.value;
-  }
-  textContent.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
-  fontSize.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
-  fontColor.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
-  bold.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
-  italic.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
-  underline.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
-  fontFamily.addEventListener('change', ()=>{
-  // 1) 立即应用——先让 UI 响应，不阻塞等待字体文件
-  applyEditorTo(state.activeTextId);
-
-  // 2) 若字体尚未加载，则在后台加载；加载完成后再补一次渲染
-  try {
-    const famName = (fontFamily.value.split(',')[0] || '').replace(/['"]/g,'').trim();
-    if (document.fonts && !document.fonts.check(`400 16px ${famName}`)) {
-      document.fonts.load(`400 16px ${famName}`)
-        .then(()=>applyEditorTo(state.activeTextId))
-        .catch(()=>{ /* 忽略加载失败，保留系统回退字体 */ });
-    }
-  } catch(_) {}
-});
-
-// Patch 1: align=center also centers the box
-align.addEventListener('change', ()=>{
-  applyEditorTo(state.activeTextId);
-
-  const el = texts[state.activeTextId];
-  if (!el) return;
-
-  if (align.value === 'center') {
-    // —— 当用户选中居中对齐时 ——  
-    el.style.left = '50%';
-    el.style.transform = 'translateX(-50%)';
-    el.dataset.leftPercent = '50.000000';  // 同步 leftPercent 数据状态
-  } else {
-    // —— 当切换回 left/right 时，去掉居中位移 ——  
-    el.style.transform = 'none';
-  }
-
-  // 保持文本在舞台范围内
-  normalizePercentPosition(el, previewStage);
-  clampPositionsToStage();
-});
-
-// === Center Guides toggle ===
-guideSelect.addEventListener('change', () => {
-  const on = guideSelect.value === 'on';
-  guideH.classList.toggle('hidden', !on);
-  guideV.classList.toggle('hidden', !on);
-});
-    
-  shadowStrength.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
-  shadowBlur.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
-  shadowColor.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
-
-  for(const el of Object.values(texts)) makeDraggable(el,previewStage);
-  function makeDraggable(el,boundary){
-    normalizePercentPosition(el,boundary);
-    let isDown=false, startX=0,startY=0, startLeftPx=0, startTopPx=0;
-    let hadCenterTransform = false;
-
-    const down=e=>{
-      if (el.classList.contains('editing')) return;
-      isDown=true; const p=getPoint(e); startX=p.x; startY=p.y;
-
-      // Patch 2: temporarily remove translateX(-50%) to avoid boundary miscalc
-      hadCenterTransform = (el.style.transform || '').includes('translateX(-50%)');
-      if (hadCenterTransform) {
-        const b = boundary.getBoundingClientRect();
-        const r = el.getBoundingClientRect();
-        const leftPxReal = r.left - b.left;
-        const leftPercentReal = (leftPxReal / b.width) * 100;
-        el.style.transform = 'none';
-        el.style.left = `${leftPercentReal}%`;
-        el.dataset.leftPercent = leftPercentReal.toFixed(6);
-      }
-
-      const b=boundary.getBoundingClientRect(); const leftTop = getInlineLeftTop(el, b);
-      startLeftPx = leftTop.leftPercent * b.width / 100;
-      startTopPx  = leftTop.topPercent  * b.height/ 100;
-      e.preventDefault(); setActiveText(el.id);
-    };
-    const move=e=>{
-      if(!isDown || el.classList.contains('editing')) return;
-      const p=getPoint(e); const dx=p.x-startX, dy=p.y-startY;
-      const b=boundary.getBoundingClientRect(); const r=el.getBoundingClientRect();
-      let leftPx = startLeftPx + dx; let topPx = startTopPx + dy;
-      leftPx=Math.max(0,Math.min(leftPx,b.width -r.width));
-      topPx =Math.max(0,Math.min(topPx ,b.height-r.height));
-      const leftPercent = (leftPx / b.width) * 100;
-      const topPercent  = (topPx  / b.height)* 100;
-      el.style.left = `${leftPercent}%`; el.style.top = `${topPercent}%`;
-      el.dataset.leftPercent = leftPercent.toFixed(6);
-      el.dataset.topPercent  = topPercent.toFixed(6);
-    };
-    const up=()=>{
-      if(!isDown) return;
-      isDown=false;
-      const stillCenterText = (getComputedStyle(el).textAlign === 'center');
-      if (hadCenterTransform && stillCenterText) {
-        el.style.transform = 'translateX(-50%)';
-        el.style.left = '50%';
-        el.dataset.leftPercent = '50.000000';
-      }
-      clampPositionsToStage();
-    };
-    el.addEventListener('mousedown',down);
-    window.addEventListener('mousemove',move);
-    window.addEventListener('mouseup',up);
-    el.addEventListener('touchstart',down,{passive:false});
-    window.addEventListener('touchmove',move,{passive:false});
-    window.addEventListener('touchend',up);
-  }
-  function normalizePercentPosition(el, boundary){
-    const b=boundary.getBoundingClientRect();
-    let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
-    if(Number.isNaN(lp) || Number.isNaN(tp)){
-      const r=el.getBoundingClientRect();
-      lp = ((r.left - b.left)/b.width) * 100;
-      tp = ((r.top  - b.top )/b.height)* 100;
-    }
-    el.style.left = `${lp}%`; el.style.top = `${tp}%`;
-    el.dataset.leftPercent = lp.toFixed(6); el.dataset.topPercent = tp.toFixed(6);
-  }
-  function getInlineLeftTop(el, brect){
-    let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
-    if(Number.isNaN(lp) || Number.isNaN(tp)){
-      const r=el.getBoundingClientRect();
-      lp = ( (r.left - brect.left) / brect.width ) * 100;
-      tp = ( (r.top  - brect.top ) / brect.height) * 100;
-    }
-    return { leftPercent: lp, topPercent: tp };
-  }
-  function clampPositionsToStage(){
-      const b = previewStage.getBoundingClientRect();
-      for (const el of Object.values(texts)) {
-          const r = el.getBoundingClientRect();
-
-// --- Overflow wrap fix：文本比舞台更宽时，改为自动换行并限制最大宽度
-if (r.width >= b.width) {
-  const isMobileNarrow = b.width <= 480;
-  const capPct = isMobileNarrow ? 96 : 92;   // 与 applyEditorTo 保持一致
-  el.style.maxWidth = capPct + '%';
-  el.style.whiteSpace = 'pre-wrap';
-  el.style.wordBreak = 'break-word';
-  el.style.overflowWrap = 'anywhere';
-  // 不再强制 left=50% 或 continue；让其继续走下方常规夹取逻辑
-}
-
-    // —— 原有常规夹取逻辑 ——
-    let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
-    if (Number.isNaN(lp) || Number.isNaN(tp)) {
-      const p = getInlineLeftTop(el, b);
-      lp = p.leftPercent; tp = p.topPercent;
-    }
-    const maxLeftP = Math.max(0, (b.width  - r.width ) / b.width  * 100);
-    const maxTopP  = Math.max(0, (b.height - r.height) / b.height * 100);
-    lp = Math.min(Math.max(lp, 0), maxLeftP);
-    tp = Math.min(Math.max(tp, 0), maxTopP);
-
-    el.style.left = `${lp}%`;
-    el.style.top  = `${tp}%`;
-    el.dataset.leftPercent = lp.toFixed(6);
-    el.dataset.topPercent  = tp.toFixed(6);
-  }
-}
-
-  function layoutGuides(){
-    const {w}=state.inches;
-    const pxPerInPreview = previewStage.clientWidth / w;
-    const bleed = Math.max(0, parseFloat(bleedIn.value)||0);
-    const safe  = Math.max(0, parseFloat(safeIn.value)||0);
-    const bleedPx = bleed * pxPerInPreview;
-    const safePx  = safe  * pxPerInPreview;
-
-    positionRect(trimGuide, 0, 0, previewStage.clientWidth, previewStage.clientHeight);
-    positionRect(safeGuide, safePx, safePx, previewStage.clientWidth-2*safePx, previewStage.clientHeight-2*safePx);
-    positionRect(bleedGuide, -bleedPx, -bleedPx, previewStage.clientWidth+2*bleedPx, previewStage.clientHeight+2*bleedPx);
-  }
-  function positionRect(el, left, top, w, h){
-    el.style.left = left+'px'; el.style.top = top+'px'; el.style.width = Math.max(0,w)+'px'; el.style.height = Math.max(0,h)+'px';
-  }
-  showGuides.addEventListener('change', ()=>{
-    const on = showGuides.checked;
-    [trimGuide, safeGuide, bleedGuide].forEach(el=> el.classList.toggle('hidden', !on));
-    if(on) layoutGuides();
-  });
-  [safeIn, bleedIn].forEach(inp=> inp.addEventListener('input', ()=>{ if(showGuides.checked) layoutGuides(); }));
-
-  function requiredPixels(){ return { W: Math.round(state.inches.w*state.dpi), H: Math.round(state.inches.h*state.dpi) }; }
-  function checkResolutionOk(){
-    const {W,H} = requiredPixels();
-    let nw = state.preview.naturalW || 0, nh = state.preview.naturalH || 0;
-    if(!nw || !nh){
-      nw = previewBgImg.naturalWidth; nh = previewBgImg.naturalHeight;
-    }
-    const ok = (nw >= W*0.95) && (nh >= H*0.95);
-    if(!ok){
-      const msg = `Warning: background may be too small for ${state.inches.w}×${state.inches.h} in @ ${state.dpi} dpi.\nNeed ≈ ${W}×${H}px; got ${nw||'unknown'}×${nh||'unknown'}.\n\nProceed anyway? (Cancel to go back)`;
-      return confirm(msg);
-    }
-    return true;
-  }
-  function shouldDownscale(wPx, hPx){
-    const MAX_SIDE = 10000, MAX_PIXELS = 80e6;
-    return (wPx > MAX_SIDE || hPx > MAX_SIDE || (wPx*hPx) > MAX_PIXELS);
-  }
-
-  btnWebPng.addEventListener('click', async()=>{
-    try{
-      document.body.style.overflow='hidden';
-      status('Generating web preview PNG…');
-      await ensureFontsReady();
-      const dataUrl=await html2canvas(previewStage,{
-        allowTaint:false, useCORS:true, backgroundColor:'#ffffff', scale:1,
-        ignoreElements: el => el.classList?.contains('export-ignore')
-      }).then(c=>c.toDataURL('image/png'));
-      const a=document.createElement('a'); a.href=dataUrl; a.download='poster-web-'+state.size+'.png'; document.body.appendChild(a); a.click(); a.remove();
-      status('Done.');
-    } catch(e){
-      handleExportError(e);
-    } finally { document.body.style.overflow=''; }
-  });
-
-  btnPrintPng.addEventListener('click', async()=>{
-    if(!checkResolutionOk()) return;
-    await withBusy(btnPrintPng, async()=>{
-      try{
-        status(`Rendering print PNG (${state.dpi} dpi)…`);
-        await ensureFontsReady();
-        const dataUrl=await renderPrintCanvas(false).then(c=>c.toDataURL('image/png'));
-        const a=document.createElement('a'); a.href=dataUrl; a.download='poster-print-'+state.size+'-'+state.dpi+'dpi.png'; document.body.appendChild(a); a.click(); a.remove();
-        status('Done.');
-      } catch(e){ handleExportError(e); throw e; }
-    });
-  });
-
-  btnPrintPdf.addEventListener('click', async()=>{
-    if(!checkResolutionOk()) return;
-    await withBusy(btnPrintPdf, async()=>{
-      try{
-        status(`Rendering print PDF (${state.dpi} dpi, true inches)…`);
-        await ensureFontsReady();
-        const canvas=await renderPrintCanvas(includeGuidesPdf.checked);
-        const { jsPDF }=window.jspdf;
-        const wIn=state.inches.w, hIn=state.inches.h;
-        const pdf=new jsPDF({orientation:wIn>hIn?'l':'p', unit:'in', format:[wIn,hIn]});
-        const imgData=canvas.toDataURL('image/jpeg',1);
-        pdf.addImage(imgData,'JPEG',0,0,wIn,hIn);
-        pdf.save('poster-print-'+state.size+'-'+state.dpi+'dpi.pdf');
-        status('Done.');
-      } catch(e){ handleExportError(e); throw e; }
-    });
-  });
-
-  function handleExportError(e){
-    console.error(e);
-    if(isIOS()){
-      alert('Export failed or blank file:\\n• Please select 200 DPI from the \"Print DPI\" dropdown and try again;\\n• Or use a computer to export the file again.');
-    }else{
-      alert('Export failed. Try 200 DPI or a smaller image. If the issue persists, try on a desktop.');
-    }
-  }
-
-  async function renderPrintCanvas(includeGuides){
-    const {w,h}=state.inches; let dpi=state.dpi;
-    let W=Math.round(w*dpi), H=Math.round(h*dpi);
-    if (shouldDownscale(W,H)) {
-      dpi = Math.min(200, dpi); W = Math.round(w*dpi); H = Math.round(h*dpi);
-      status(`Target too large → auto-downgraded to ${dpi} dpi (${W}×${H}px).`);
-    }
-
-    printStage.innerHTML=''; printStage.style.width=W+'px'; printStage.style.height=H+'px';
-    const wrap=document.createElement('div');
-    wrap.style.cssText=`position:relative;width:${W}px;height:${H}px;overflow:visible;background:#ffffff;`;
-    const img=document.createElement('img');
-    img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
-    img.crossOrigin='anonymous';
-    img.src=state.preview.bgLarge || state.preview.bgSmall || '';
-    wrap.appendChild(img);
-
-    const pr=previewStage.getBoundingClientRect();
-    const sx=W/pr.width, sy=H/pr.height;
-    const k=(sx+sy)/2;
-
-    await new Promise(res=>{ if(!img.src){ res(); return; } img.onload=res; img.onerror=res; });
-
-    for(const id of ['t1','t2','t3']){
-      const src=texts[id];
-      const srec=src.getBoundingClientRect();
-      const cs=getComputedStyle(src);
-      const el=document.createElement('div');
-      el.textContent=src.textContent;
-      el.style.position='absolute';
-      
       // 修复高 DPI 导出时文本错位问题
       const leftPx = (srec.left - pr.left + window.scrollX) * sx;
       const topPx  = (srec.top  - pr.top  + window.scrollY) * sy;
@@ -1015,20 +687,55 @@ if (r.width >= b.width) {
       // 若原始元素带有 translateX(-50%)，则补回 transform
       if (getComputedStyle(src).transform.includes('translateX')) {
         el.style.transform = 'translateX(-50%)';
+        el.style.transformOrigin = 'top left';
       }
 
-      // lock width to on-screen width to preserve text wrapping when exporting
-      el.style.width = (srec.width * sx) + 'px';
-      el.style.overflowWrap = 'anywhere';
+      // === 修复换行后文字堆叠：字号/行高/字间距按比例缩放 ===
+      const fontPx = parseFloat(cs.fontSize) * k;
+      el.style.fontSize = fontPx + 'px';
+      el.style.display = 'block';
+      el.style.whiteSpace = cs.whiteSpace || 'pre-wrap';
       el.style.wordBreak = 'break-word';
-      el.style.fontSize=(parseFloat(cs.fontSize)*k)+'px';
-      el.style.fontFamily=cs.fontFamily;
-      el.style.color=cs.color;
-      el.style.fontWeight=cs.fontWeight;
-      el.style.fontStyle=cs.fontStyle;
-      el.style.textDecoration=cs.textDecoration;
-      el.style.textAlign=cs.textAlign;
-      el.style.whiteSpace=cs.whiteSpace||'pre-wrap';
+      el.style.overflowWrap = 'anywhere';
+      el.style.textAlign = cs.textAlign;
+      el.style.fontFamily = cs.fontFamily;
+      el.style.color = cs.color;
+      el.style.fontWeight = cs.fontWeight;
+      el.style.fontStyle = cs.fontStyle;
+      el.style.textDecoration = cs.textDecoration;
+
+      // 行高等比换算
+      (function fixLineHeight(){
+        const lh = cs.lineHeight;
+        let lhPx;
+        if (lh === 'normal' || !lh) {
+          lhPx = fontPx * 1.3;         // 默认系数
+        } else if (/\d+px$/.test(lh)) {
+          lhPx = parseFloat(lh) * k;   // px 值按比例放大
+        } else if (!isNaN(parseFloat(lh))) {
+          lhPx = parseFloat(lh) * fontPx; // 数值因子（无单位）
+        } else {
+          lhPx = fontPx * 1.3;
+        }
+        el.style.lineHeight = lhPx + 'px';
+      })();
+
+      // 字间距/词间距等比换算（如果使用了的话）
+      (function fixSpacing(){
+        const ls = cs.letterSpacing;
+        if (ls && ls !== 'normal' && /\d/.test(ls)) {
+          const v = parseFloat(ls);
+          if (!isNaN(v)) el.style.letterSpacing = (v * k) + 'px';
+        }
+        const ws = cs.wordSpacing;
+        if (ws && ws !== 'normal' && /\d/.test(ws)) {
+          const v = parseFloat(ws);
+          if (!isNaN(v)) el.style.wordSpacing = (v * k) + 'px';
+        }
+      })();
+
+      // 锁定导出宽度以保持与预览一致的换行
+      el.style.width = (srec.width * sx) + 'px';
       el.style.lineHeight=(cs.lineHeight==='normal'?'1.25':cs.lineHeight);
       let sds = parseInt(src.dataset.shadowS||'0',10);
       let sblur = parseFloat(src.dataset.shadowBlur||'0');
@@ -1254,4 +961,3 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
-
