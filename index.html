@@ -586,54 +586,67 @@ if (v === '24x30') {
       { id:'t3', left:'60%', top:'85%', align:'right' },
     ]
   };
-  function applyLayout(name){
-    const tpl = layoutTemplates[name];
-    if(!tpl) return;
-    // record current layout & responsive params (for bottomRight mobile fix)
-currentLayoutName = name;
-const isMobileNarrow = previewStage.clientWidth <= 480; // detect mobile
-const BR_WIDTH_PCT = isMobileNarrow ? 82 : 40;          // content width (%)
-const BR_MARGIN_RIGHT_PCT = isMobileNarrow ? 6 : 4;     // right safe margin (%)
-    tpl.forEach(t=>{
-      const el = document.getElementById(t.id);
-      el.style.left = t.left;
-      el.style.top = t.top;
-      el.style.textAlign = t.align;
-      el.style.transform = (t.align === 'center') ? 'translateX(-50%)' : 'none';
-      // --- bottomRight mobile fix: fixed box width at right side, let text wrap ---
-if (name === 'bottomRight') {
-  el.style.maxWidth   = BR_WIDTH_PCT + '%';
-  el.style.width      = BR_WIDTH_PCT + '%';
-  el.style.whiteSpace = 'pre-wrap';
+function applyLayout(name){
+  const tpl = layoutTemplates[name];
+  if(!tpl) return;
 
-  const leftPercent = 100 - BR_MARGIN_RIGHT_PCT - BR_WIDTH_PCT;
-  el.style.left      = leftPercent + '%';
-  el.style.transform = 'none';
-  el.style.textAlign = 'right';
+  currentLayoutName = name;
 
-  el.dataset.leftPercent = leftPercent.toFixed(6);
+  const isMobileNarrow = previewStage.clientWidth <= 480;
+  const BR_WIDTH_PCT = isMobileNarrow ? 82 : 40;
+  const BR_MARGIN_RIGHT_PCT = isMobileNarrow ? 6 : 4;
+  const stageRect = previewStage.getBoundingClientRect();
+
+  tpl.forEach(t=>{
+    const el = document.getElementById(t.id);
+    if (!el) return;
+
+    // ① 清理前一个布局残留样式
+    el.style.width = '';
+    el.style.maxWidth = '';
+    el.style.transform = 'none';
+    el.style.textAlign = '';
+    el.style.whiteSpace = 'pre-wrap';
+    el.style.wordBreak = 'break-word';
+    el.style.overflowWrap = 'anywhere';
+
+    // ② 设置本次基础位置与对齐
+    el.style.left = t.left;
+    el.style.top  = t.top;
+    el.style.textAlign = t.align;
+
+    const leftP = (String(t.left).trim().endsWith('%'))
+      ? parseFloat(t.left)
+      : (parseFloat(t.left) / stageRect.width) * 100;
+    const topP = (String(t.top).trim().endsWith('%'))
+      ? parseFloat(t.top)
+      : (parseFloat(t.top) / stageRect.height) * 100;
+
+    // ③ 不同模板样式
+    if (name === 'centered') {
+      el.style.left = '50%';
+      el.style.transform = 'translateX(-50%)';
+      el.dataset.leftPercent = '50.000000';
+      el.dataset.topPercent = isFinite(topP) ? topP.toFixed(6) : el.dataset.topPercent;
+    } else if (name === 'topLeft') {
+      el.style.transform = 'none';
+      el.dataset.leftPercent = isFinite(leftP) ? leftP.toFixed(6) : el.dataset.leftPercent;
+      el.dataset.topPercent  = isFinite(topP)  ? topP.toFixed(6)  : el.dataset.topPercent;
+    } else if (name === 'bottomRight') {
+      const leftPercent = 100 - BR_MARGIN_RIGHT_PCT - BR_WIDTH_PCT;
+      el.style.left      = leftPercent + '%';
+      el.style.transform = 'none';
+      el.style.textAlign = 'right';
+      el.style.maxWidth  = BR_WIDTH_PCT + '%';
+      el.style.width     = BR_WIDTH_PCT + '%';
+      el.dataset.leftPercent = leftPercent.toFixed(6);
+      el.dataset.topPercent  = isFinite(topP) ? topP.toFixed(6) : el.dataset.topPercent;
+    }
+  });
+
+  clampPositionsToStage();
+  status('Applied layout: ' + name);
 }
-
-const b = previewStage.getBoundingClientRect();
-const leftP = (String(t.left).trim().endsWith('%'))
-  ? parseFloat(t.left)
-  : (parseFloat(t.left) / b.width) * 100;
-const topP  = (String(t.top).trim().endsWith('%'))
-  ? parseFloat(t.top)
-  : (parseFloat(t.top)  / b.height) * 100;
-
-if (name === 'bottomRight') {
-  // 已在上方 bottomRight 分支写过 el.dataset.leftPercent
-} else {
-  el.dataset.leftPercent = isFinite(leftP) ? leftP.toFixed(6) : el.dataset.leftPercent;
-}
-el.dataset.topPercent = isFinite(topP) ? topP.toFixed(6) : el.dataset.topPercent;
-});  // ← 结束 tpl.forEach 回调
-
-// forEach 结束后再统一调用
-clampPositionsToStage();
-status('Applied layout: ' + name);
-}    // ← 结束 applyLayout 函数
 
   function setActiveText(id){
     state.activeTextId = id;
@@ -1273,4 +1286,5 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
 
