@@ -400,6 +400,11 @@
 
   const iosNotice = document.getElementById('iosNotice');
   const closeIosNotice = document.getElementById('closeIosNotice');
+    // === 尺寸切换事件绑定 ===
+sizeSelect.value = state.size; // 与当前状态同步
+sizeSelect.addEventListener('change', (e) => {
+  setSize(e.target.value);
+});
 
   function status(msg){ statusMsg.textContent=msg; }
   function isIOS(){ return /iP(hone|ad|od)/i.test(navigator.userAgent); }
@@ -419,7 +424,12 @@
     };
     state.size=v;
     if(v==='24x30'){ state.preview.height=2400; state.inches={w:24,h:30}; previewStage.style.aspectRatio='4/5'; }
-    else           { state.preview.height=4000; state.inches={w:24,h:50}; previewStage.style.aspectRatio='24/50'; }
+    else {
+  state.preview.width  = 1920;            // 同步宽度
+  state.preview.height = 4000;            // 24x50 高度
+  state.inches = { w:24, h:50 };
+  previewStage.style.aspectRatio = (24 / 50); // 数值比值写法更稳
+}
 
     if(isIOS() && v==='24x50'){ dpiSelect.value='200'; setDpi(200); status('On iPhone: 200 DPI set for stability.'); }
 
@@ -1120,5 +1130,6 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
 
 
