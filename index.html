@@ -875,6 +875,10 @@ guideSelect.addEventListener('change', () => {
       el.style.position='absolute';
       el.style.left=((srec.left-pr.left)*sx)+'px';
       el.style.top =((srec.top -pr.top )*sy)+'px';
+      // lock width to on-screen width to preserve text wrapping when exporting
+      el.style.width = (srec.width * sx) + 'px';
+      el.style.overflowWrap = 'anywhere';
+      el.style.wordBreak = 'break-word';
       el.style.fontSize=(parseFloat(cs.fontSize)*k)+'px';
       el.style.fontFamily=cs.fontFamily;
       el.style.color=cs.color;
@@ -1039,6 +1043,7 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
   </script>
 </body>
 </html>
+
 
 
 
