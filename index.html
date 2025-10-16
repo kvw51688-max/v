@@ -230,7 +230,7 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block text-sm font-medium mb-1">Safe Margin (in)</label>
-              <input type="number" id="safeIn" step="0.0625" value="0.25" class="w-full border rounded px-2 py-1" />
+              <input type="number" id="safeIn" step="0.0625" value="0.5" class="w-full border rounded px-2 py-1" />
             </div>
             <div>
               <label class="block text-sm font-medium mb-1">Bleed (in)</label>
@@ -240,11 +240,11 @@
 
           <div class="grid grid-cols-2 gap-2">
             <label class="inline-flex items-center gap-2">
-              <input type="checkbox" id="showGuides" />
+              <input type="checkbox" id="showGuides" checked />
               <span class="text-sm">Show Trim/Safe/Bleed guides (preview)</span>
             </label>
             <label class="inline-flex items-center gap-2">
-              <input type="checkbox" id="includeGuidesPdf" />
+              <input type="checkbox" id="includeGuidesPdf" checked />
               <span class="text-sm">Include guides in PDF export</span>
             </label>
           </div>
@@ -270,8 +270,9 @@
         <span class="hidden md:inline w-px h-6 bg-slate-200 mx-1"></span>
 
         <button id="btnWebPng"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Download Web PNG (1920px)</button>
-        <button id="btnPrintPng" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Download Print PNG (DPI)</button>
-        <button id="btnPrintPdf" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Download Print PDF (true inches)</button>
+        <button id="btnPrintPng" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Print PNG (High-Res)</button>
+        <button id="btnPrintPdf" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Print-Ready PDF (Exact Inches)</button>
+        <div class="w-full text-xs md:text-sm text-slate-500">Best for FedEx/Staples/Office Depot printing.</div>
       </div>
     </div>
   </footer>
@@ -1091,6 +1092,16 @@ guideSelect.addEventListener('change', () => {
   guideH.classList.toggle('hidden', !on);
   guideV.classList.toggle('hidden', !on);
 })();
+
+// === Init Trim/Safe/Bleed guides visibility on load ===
+(function initFrameGuides(){
+  if (showGuides && showGuides.checked) {
+    [trimGuide, safeGuide, bleedGuide].forEach(el => el.classList.remove('hidden'));
+    layoutGuides();
+  } else {
+    [trimGuide, safeGuide, bleedGuide].forEach(el => el.classList.add('hidden'));
+  }
+})();
 // Font load quick check
 try { for (const f of document.fonts) { console.log('[font]', f.family, f.status); } } catch(_) {}
   </script>
@@ -1099,3 +1110,4 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
