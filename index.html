@@ -12,10 +12,12 @@
   <!-- html2canvas & jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <link rel="preload" href="fonts/inter/inter-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/inter/inter-700.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/bangers/bangers-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/playfairdisplay/playfairdisplay-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/inter/inter-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/bangers/bangers-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/playfairdisplay/playfairdisplay-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/baloo2/baloo2-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/manrope/manrope-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/pacifico/pacifico-regular.woff2" as="font" type="font/woff2" crossorigin>
 <!-- Local Fonts preloads (relative paths; safe for GitHub Pages subpaths) -->
 
   <style>
@@ -617,7 +619,20 @@ if (name === 'bottomRight') {
   bold.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
   italic.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
   underline.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
-  fontFamily.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
+  fontFamily.addEventListener('change', ()=>{
+  // 1) 立即应用——先让 UI 响应，不阻塞等待字体文件
+  applyEditorTo(state.activeTextId);
+
+  // 2) 若字体尚未加载，则在后台加载；加载完成后再补一次渲染
+  try {
+    const famName = (fontFamily.value.split(',')[0] || '').replace(/['"]/g,'').trim();
+    if (document.fonts && !document.fonts.check(`400 16px ${famName}`)) {
+      document.fonts.load(`400 16px ${famName}`)
+        .then(()=>applyEditorTo(state.activeTextId))
+        .catch(()=>{ /* 忽略加载失败，保留系统回退字体 */ });
+    }
+  } catch(_) {}
+});
 
   // Patch 1: align=center also centers the box
   align.addEventListener('change', ()=>{
@@ -1043,6 +1058,7 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
   </script>
 </body>
 </html>
+
 
 
 
