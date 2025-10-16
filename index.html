@@ -427,6 +427,17 @@ sizeSelect.addEventListener('change', (e) => {
   function rgbToStyleHex(c){ if(!c) return '#000000'; if(c.startsWith('#')) return c; return rgbToHex(getComputedStyle(Object.assign(document.createElement('div'),{style:{color:c}})).color); }
   async function ensureFontsReady(){ if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch(_){} } }
   function getPoint(e){ if(e.touches&&e.touches[0]) return {x:e.touches[0].clientX,y:e.touches[0].clientY}; return {x:e.clientX,y:e.clientY};}
+  // === parsePercent helper ===
+  // 将 "50%" 转换为 50，非百分比返回 NaN，让调用方走回退逻辑
+  function parsePercent(v){
+    if (v == null) return NaN;
+    const s = String(v).trim();
+    if (s.endsWith('%')) {
+      const n = parseFloat(s.slice(0, -1));
+      return Number.isFinite(n) ? n : NaN;
+    }
+    return NaN;
+  }
 
   (function(){ if(isIOS()){ iosNotice.classList.remove('hidden'); closeIosNotice.addEventListener('click', ()=> iosNotice.classList.add('hidden')); } })();
 
@@ -652,6 +663,13 @@ status('Applied layout: ' + name);
     if(!Number.isNaN(dsB)) shadowBlur.value = dsB;
     shadowColor.value = el.dataset.shadowColor || '#000000';
   }
+    // 侧栏 Text1/2/3 按钮切换激活元素（放在 loadTextEditorFrom 之后）
+document.querySelectorAll('.pickTarget').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const id = btn.dataset.target; // 't1' | 't2' | 't3'
+    setActiveText(id);
+  });
+});
   function applyEditorTo(id){
     const el=texts[id]; if(!el) return;
     el.innerText=textContent.value;
@@ -1236,3 +1254,4 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
