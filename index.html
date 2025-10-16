@@ -400,6 +400,11 @@
 
   const iosNotice = document.getElementById('iosNotice');
   const closeIosNotice = document.getElementById('closeIosNotice');
+        // === 尺寸切换事件绑定 ===
+sizeSelect.value = state.size; // 与当前状态同步
+sizeSelect.addEventListener('change', (e) => {
+  setSize(e.target.value);
+});
     
   const textContent    = document.getElementById('textContent');
   const fontSize       = document.getElementById('fontSize');
@@ -412,11 +417,6 @@
   const shadowStrength = document.getElementById('shadowStrength');
   const shadowBlur     = document.getElementById('shadowBlur');
   const shadowColor    = document.getElementById('shadowColor');
-    // === 尺寸切换事件绑定 ===
-sizeSelect.value = state.size; // 与当前状态同步
-sizeSelect.addEventListener('change', (e) => {
-  setSize(e.target.value);
-});
 
   function status(msg){ statusMsg.textContent=msg; }
   function isIOS(){ return /iP(hone|ad|od)/i.test(navigator.userAgent); }
@@ -437,10 +437,10 @@ sizeSelect.addEventListener('change', (e) => {
     state.size=v;
     if(v==='24x30'){ state.preview.height=2400; state.inches={w:24,h:30}; previewStage.style.aspectRatio='4/5'; }
     else {
-  state.preview.width  = 1920;            // 同步宽度
-  state.preview.height = 4000;            // 24x50 高度
+  state.preview.width  = 1920;            // 与 24×30 的基准宽度一致
+  state.preview.height = 4000;            // 24×50 的高度
   state.inches = { w:24, h:50 };
-  previewStage.style.aspectRatio = (24 / 50); // 数值比值写法更稳
+  previewStage.style.aspectRatio = (24 / 50); // 用数值更稳
 }
 
     if(isIOS() && v==='24x50'){ dpiSelect.value='200'; setDpi(200); status('On iPhone: 200 DPI set for stability.'); }
@@ -650,11 +650,18 @@ status('Applied layout: ' + name);
   function applyEditorTo(id){
     const el=texts[id]; if(!el) return;
     el.innerText=textContent.value;
-    const stageW = previewStage.getBoundingClientRect().width || 320;
     const wantedPx = parseInt(fontSize.value,10) || 36;
-    const maxPx = Math.floor(stageW * 0.06);  // 舞台宽度的 6% 作为字号上限
-    el.style.fontSize = `${Math.min(wantedPx, maxPx)}px`;
+    // 取消上限：直接使用用户想要的字号
+    el.style.fontSize = `${wantedPx}px`;
     el.style.lineHeight = '1.25';
+
+    // 允许大标题自动换行
+    const isMobileNarrow = previewStage.clientWidth <= 480;
+    const capPct = isMobileNarrow ? 96 : 92;     // 容器最大宽度百分比（可按需调整）
+    el.style.maxWidth = capPct + '%';
+    el.style.whiteSpace = 'pre-wrap';
+    el.style.wordBreak = 'break-word';
+    el.style.overflowWrap = 'anywhere';
     el.style.color=fontColor.value;
     el.style.fontWeight=bold.checked?'700':'400';
     el.style.fontStyle=italic.checked?'italic':'normal';
@@ -707,20 +714,27 @@ status('Applied layout: ' + name);
   } catch(_) {}
 });
 
-  // Patch 1: align=center also centers the box
-  align.addEventListener('change', ()=>{
-      applyEditorTo(state.activeTextId);
-      if (align.value === 'center') {
-      const el = texts[state.activeTextId];
-      if (el) {
-        el.style.left = '50%';
-        el.style.transform = 'translateX(-50%)';
-        el.dataset.leftPercent = '50.000000';   // ★ 关键：同步数据状态
-        normalizePercentPosition(el, previewStage);
-        clampPositionsToStage();
-      }
-    }
-  });
+// Patch 1: align=center also centers the box
+align.addEventListener('change', ()=>{
+  applyEditorTo(state.activeTextId);
+
+  const el = texts[state.activeTextId];
+  if (!el) return;
+
+  if (align.value === 'center') {
+    // —— 当用户选中居中对齐时 ——  
+    el.style.left = '50%';
+    el.style.transform = 'translateX(-50%)';
+    el.dataset.leftPercent = '50.000000';  // 同步 leftPercent 数据状态
+  } else {
+    // —— 当切换回 left/right 时，去掉居中位移 ——  
+    el.style.transform = 'none';
+  }
+
+  // 保持文本在舞台范围内
+  normalizePercentPosition(el, previewStage);
+  clampPositionsToStage();
+});
 
 // === Center Guides toggle ===
 guideSelect.addEventListener('change', () => {
@@ -816,22 +830,16 @@ guideSelect.addEventListener('change', () => {
       for (const el of Object.values(texts)) {
           const r = el.getBoundingClientRect();
 
-    // --- Mobile overflow fix：文本比舞台更宽时，允许百分比居中，避免被夹到 0%
-    if (r.width >= b.width) {
-      el.style.left = '50%';
-      el.style.transform = 'translateX(-50%)';
-      el.dataset.leftPercent = '50.000000';
-
-      // 仅对 top 做上下边界夹取
-      let tp = parsePercent(el.style.top);
-      if (Number.isNaN(tp)) tp = 0;
-      const maxTopP = Math.max(0, (b.height - r.height) / b.height * 100);
-      tp = Math.min(Math.max(tp, 0), maxTopP);
-      el.style.top = `${tp}%`;
-      el.dataset.topPercent = tp.toFixed(6);
-      continue; // 本元素跳过后续常规夹取
-    }
-    // --- Mobile overflow fix 结束 ---
+// --- Overflow wrap fix：文本比舞台更宽时，改为自动换行并限制最大宽度
+if (r.width >= b.width) {
+  const isMobileNarrow = b.width <= 480;
+  const capPct = isMobileNarrow ? 96 : 92;   // 与 applyEditorTo 保持一致
+  el.style.maxWidth = capPct + '%';
+  el.style.whiteSpace = 'pre-wrap';
+  el.style.wordBreak = 'break-word';
+  el.style.overflowWrap = 'anywhere';
+  // 不再强制 left=50% 或 continue；让其继续走下方常规夹取逻辑
+}
 
     // —— 原有常规夹取逻辑 ——
     let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
@@ -1178,4 +1186,5 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
 
