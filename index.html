@@ -626,6 +626,7 @@ function applyLayout(name){
     if (name === 'centered') {
       el.style.left = '50%';
       el.style.transform = 'translateX(-50%)';
+      el.style.textAlign = 'center';
       el.dataset.leftPercent = '50.000000';
       el.dataset.topPercent = isFinite(topP) ? topP.toFixed(6) : el.dataset.topPercent;
     } else if (name === 'topLeft') {
@@ -1286,5 +1287,6 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
 
 
