@@ -22,7 +22,7 @@
     @font-face { font-family: 'Bangers'; src: url('fonts/bangers/bangers-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Chewy'; src: url('fonts/chewy/chewy-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Creepster'; src: url('fonts/creepster/creepster-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Dancing Script'; src: url('fonts/dancingscript/dancingscript-regular.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Dancing Script'; src: url('fonts/dancingscript/dancingscript-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'DM Serif Display'; src: url('fonts/dmserifdisplay/dmserifdisplay-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Great Vibes'; src: url('fonts/greatvibes/greatvibes-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Manrope'; src: url('fonts/manrope/manrope-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
@@ -405,6 +405,7 @@ sizeSelect.value = state.size; // 与当前状态同步
 sizeSelect.addEventListener('change', (e) => {
   setSize(e.target.value);
 });
+    dpiSelect.addEventListener('change', (e)=> setDpi(e.target.value));
     
   const textContent    = document.getElementById('textContent');
   const fontSize       = document.getElementById('fontSize');
@@ -435,8 +436,12 @@ sizeSelect.addEventListener('change', (e) => {
       naturalW: state.preview.naturalW, naturalH: state.preview.naturalH
     };
     state.size=v;
-    if(v==='24x30'){ state.preview.height=2400; state.inches={w:24,h:30}; previewStage.style.aspectRatio='4/5'; }
-    else {
+if (v === '24x30') {
+  state.preview.width  = 1920;            // ← 新增这一行，保持宽度一致
+  state.preview.height = 2400;
+  state.inches = { w:24, h:30 };
+  previewStage.style.aspectRatio = '4/5';
+} else {
   state.preview.width  = 1920;            // 与 24×30 的基准宽度一致
   state.preview.height = 4000;            // 24×50 的高度
   state.inches = { w:24, h:50 };
@@ -669,21 +674,17 @@ status('Applied layout: ' + name);
     el.style.textAlign=align.value;
     el.style.fontFamily=fontFamily.value;
     // Enforce 400 for families that only have 400 to avoid fake bold / fallback illusion
-    (function enforceWeightFor400() {
-      try {
-        const famName = (fontFamily.value.split(',')[0] || '').replace(/['"]/g,'').trim();
-        const only400 = new Set(['Baloo2','Bangers','Chewy','Creepster','DM Serif Display','Manrope','Noto Sans Display','Playfair Display','Pacifico','Great Vibes']);
-        if (only400.has(famName)) { el.style.fontWeight = '400'; }
-      } catch(_) {}
-    })();
-    // 强制仅400字重的字体使用 400，避免伪粗回退
-    (function enforceWeightFor400() {
-      try {
-        const famName = (fontFamily.value.split(',')[0] || '').replace(/['"]/g,'').trim();
-        const only400 = new Set(['Baloo2','Bangers','Chewy','Creepster','DM Serif Display','Manrope','Noto Sans Display','Playfair Display','Pacifico','Dancing Script','Great Vibes']);
-        if (only400.has(famName)) { el.style.fontWeight = '400'; }
-      } catch(_) {}
-    })();
+(function enforceWeightFor400() {
+  try {
+    const famName = (fontFamily.value.split(',')[0] || '').replace(/['"]/g,'').trim();
+    const only400 = new Set([
+      'Baloo2','Bangers','Chewy','Creepster','DM Serif Display',
+      'Manrope','Noto Sans Display','Playfair Display','Pacifico',
+      'Dancing Script','Great Vibes'
+    ]);
+    if (only400.has(famName)) { el.style.fontWeight = '400'; }
+  } catch(_) {}
+})();
     
     const s=parseInt(shadowStrength.value,10)||0;
     const bl=parseInt(shadowBlur.value,10)||0;
@@ -858,13 +859,6 @@ if (r.width >= b.width) {
     el.dataset.topPercent  = tp.toFixed(6);
   }
 }
-
-  // Patch 3: Re-layout guides and clamp on resize
-  window.addEventListener('resize', ()=>{
-    layoutGuides();
-    clampPositionsToStage();
-    applyLayout(currentLayoutName);
-  });
 
   function layoutGuides(){
     const {w}=state.inches;
@@ -1060,43 +1054,6 @@ if (r.width >= b.width) {
       el.classList.remove('opacity-70','cursor-wait');
     }
   }
-  function parsePercent(v){ if(!v) return NaN; if(String(v).trim().endsWith('%')) return parseFloat(v); return NaN; }
-  function getInlineLeftTop(el, brect){
-    let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
-    if(Number.isNaN(lp) || Number.isNaN(tp)){
-      const r=el.getBoundingClientRect();
-      lp = ( (r.left - brect.left) / brect.width ) * 100;
-      tp = ( (r.top  - brect.top ) / brect.height) * 100;
-    }
-    return { leftPercent: lp, topPercent: tp };
-  }
-  function normalizePercentPosition(el, boundary){
-    const b=boundary.getBoundingClientRect();
-    let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
-    if(Number.isNaN(lp) || Number.isNaN(tp)){
-      const r=el.getBoundingClientRect();
-      lp = ((r.left - b.left)/b.width) * 100;
-      tp = ((r.top  - b.top )/b.height)* 100;
-    }
-    el.style.left = `${lp}%`; el.style.top = `${tp}%`;
-    el.dataset.leftPercent = lp.toFixed(6); el.dataset.topPercent = tp.toFixed(6);
-  }
-  function clampPositionsToStage(){
-    const b=previewStage.getBoundingClientRect();
-    for(const el of Object.values(texts)){
-      const r=el.getBoundingClientRect();
-      let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
-      if(Number.isNaN(lp) || Number.isNaN(tp)){
-        const p=getInlineLeftTop(el, b); lp=p.leftPercent; tp=p.topPercent;
-      }
-      const maxLeftP = Math.max(0, (b.width  - r.width ) / b.width  * 100);
-      const maxTopP  = Math.max(0, (b.height - r.height) / b.height * 100);
-      lp = Math.min(Math.max(lp, 0), maxLeftP);
-      tp = Math.min(Math.max(tp, 0), maxTopP);
-      el.style.left = `${lp}%`; el.style.top  = `${tp}%`;
-      el.dataset.leftPercent = lp.toFixed(6); el.dataset.topPercent = tp.toFixed(6);
-    }
-  }
 
   // Patch 5: Keyboard micro-adjust (Shift = 5px)
   document.addEventListener('keydown', (e)=>{
@@ -1146,6 +1103,18 @@ if (r.width >= b.width) {
     el.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { e.preventDefault(); el.blur(); } });
   });
 
+    // Re-layout and clamp on resize (debounced)
+let _rsTimer = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(_rsTimer);
+  _rsTimer = setTimeout(()=>{
+    layoutGuides();
+    // 若你的模板需要随宽度自适应，可再启用下一行；不需要就别启用避免重置位置：
+    // applyLayout(currentLayoutName);
+    clampPositionsToStage();
+  }, 80);
+});
+
   // First render
   t1.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
   t2.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
@@ -1162,6 +1131,87 @@ if (r.width >= b.width) {
   setActiveText(state.activeTextId);
   layoutGuides();
   status('Ready. Choose a background, edit texts, and export.');
+    // --- Quick Save / Load / Clear using localStorage ---
+btnSave.addEventListener('click', () => {
+  const payload = {
+    state,
+    texts: ['t1','t2','t3'].map(id => {
+      const el = document.getElementById(id);
+      return {
+        id,
+        text: el.textContent,
+        style: {
+          left: el.style.left,
+          top: el.style.top,
+          transform: el.style.transform,
+          textAlign: el.style.textAlign,
+          fontFamily: el.style.fontFamily,
+          fontSize: el.style.fontSize,
+          color: el.style.color,
+          fontWeight: el.style.fontWeight,
+          fontStyle: el.style.fontStyle,
+          textDecoration: el.style.textDecoration,
+          whiteSpace: el.style.whiteSpace,
+          maxWidth: el.style.maxWidth,
+          wordBreak: el.style.wordBreak,
+          overflowWrap: el.style.overflowWrap
+        },
+        dataset: {
+          leftPercent: el.dataset.leftPercent,
+          topPercent: el.dataset.topPercent,
+          shadowS: el.dataset.shadowS,
+          shadowBlur: el.dataset.shadowBlur,
+          shadowColor: el.dataset.shadowColor
+        }
+      };
+    })
+  };
+  localStorage.setItem('posterDesign', JSON.stringify(payload));
+  status('Design saved locally.');
+});
+
+btnLoad.addEventListener('click', () => {
+  const raw = localStorage.getItem('posterDesign');
+  if (!raw) { status('No saved design found.'); return; }
+  try {
+    const payload = JSON.parse(raw);
+
+    // restore size/dpi/background picks
+    if (payload.state?.size) { sizeSelect.value = payload.state.size; setSize(payload.state.size); }
+    if (payload.state?.dpi)  { dpiSelect.value  = payload.state.dpi;  setDpi(payload.state.dpi); }
+    if (payload.state?.preview) {
+      Object.assign(state.preview, payload.state.preview);
+      applyPreviewBg();
+    }
+
+    // restore texts
+    (payload.texts || []).forEach(t => {
+      const el = document.getElementById(t.id);
+      if (!el) return;
+      el.textContent = t.text || '';
+      Object.assign(el.style, t.style || {});
+      if (t.dataset) {
+        el.dataset.leftPercent  = t.dataset.leftPercent  || el.dataset.leftPercent;
+        el.dataset.topPercent   = t.dataset.topPercent   || el.dataset.topPercent;
+        el.dataset.shadowS      = t.dataset.shadowS      || el.dataset.shadowS;
+        el.dataset.shadowBlur   = t.dataset.shadowBlur   || el.dataset.shadowBlur;
+        el.dataset.shadowColor  = t.dataset.shadowColor  || el.dataset.shadowColor;
+      }
+    });
+
+    clampPositionsToStage();
+    layoutGuides();
+    loadTextEditorFrom(state.activeTextId);
+    status('Design loaded.');
+  } catch {
+    status('Failed to load saved design.');
+  }
+});
+
+btnClear.addEventListener('click', () => {
+  localStorage.removeItem('posterDesign');
+  status('Saved design cleared.');
+});
     // === Init Center Guides visibility on load ===
 (function initCenterGuides(){
   const on = guideSelect.value === 'on';
@@ -1186,5 +1236,3 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
-
-
