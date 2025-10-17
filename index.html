@@ -555,7 +555,8 @@ if (v === '24x30') {
   });
 
   bgUpload.addEventListener('change', async(e)=>{
-    const file=e.target.files?.[0]; if(!file) return;
+    const file = (e.target && e.target.files && e.target.files[0]) || null;
+if (!file) return;
     const dataUrl=await new Promise((resolve,reject)=>{ const fr=new FileReader(); fr.onload=()=>resolve(fr.result); fr.onerror=reject; fr.readAsDataURL(file); });
     const img=new Image();
     img.onload=()=>{
@@ -871,21 +872,20 @@ function clampPositionsToStage(){
   const b = previewStage.getBoundingClientRect();
 
   for (const el of Object.values(texts)) {
-    const r = el.getBoundingClientRect();
+    let r = el.getBoundingClientRect();  // ← 用 let
 
-    // 仍然保留：文本过宽时自动换行并限制最大宽度
+    // 文本过宽时自动换行并限制最大宽度
     if (r.width >= b.width) {
       const isMobileNarrow = b.width <= 480;
-      const capPct = isMobileNarrow ? 96 : 92;   // 与 applyEditorTo 保持一致
+      const capPct = isMobileNarrow ? 96 : 92;
       el.style.maxWidth   = capPct + '%';
       el.style.whiteSpace = 'pre-wrap';
       el.style.wordBreak  = 'break-word';
       el.style.overflowWrap = 'anywhere';
     }
 
-          // ★ 关键新增：样式变化后重新测量尺寸，确保后续夹取用到最新宽高
-      r = el.getBoundingClientRect();
-    }
+    // 样式变化后重新测量尺寸
+    r = el.getBoundingClientRect();
 
     // 解析当前位置（百分比）
     let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
@@ -894,30 +894,27 @@ function clampPositionsToStage(){
       lp = p.leftPercent; tp = p.topPercent;
     }
 
-    // 关键改动：区分“居中”和“非居中”
+    // 区分“居中”和“非居中”
     const isCenterTrans = (el.style.transform || '').includes('translateX(-50%)');
 
     if (isCenterTrans) {
-      // 居中：left% 是“中心点”，限制中心点在 [半宽, 100-半宽] 区间
       const halfWPercent = (r.width / 2) / b.width * 100;
       const minCenter = Math.max(0, halfWPercent);
       const maxCenter = Math.min(100, 100 - halfWPercent);
       lp = Math.min(Math.max(lp, minCenter), maxCenter);
       el.style.left = `${lp}%`;
-      // transform 保持不变（继续使用 translateX(-50%)）
     } else {
-      // 非居中：left% 作为“左边缘”
       const maxLeftP = Math.max(0, (b.width - r.width) / b.width * 100);
       lp = Math.min(Math.max(lp, 0), maxLeftP);
       el.style.left = `${lp}%`;
     }
 
-    // 纵向：一律把 top% 当“上边缘”来夹取
+    // 纵向：top% 当“上边缘”
     const maxTopP = Math.max(0, (b.height - r.height) / b.height * 100);
     tp = Math.min(Math.max(tp, 0), maxTopP);
     el.style.top = `${tp}%`;
 
-    // 同步数据集
+    // 同步数据
     el.dataset.leftPercent = lp.toFixed(6);
     el.dataset.topPercent  = tp.toFixed(6);
   }
@@ -976,7 +973,7 @@ function clampPositionsToStage(){
       await ensureFontsReady();
       const dataUrl=await html2canvas(previewStage,{
         allowTaint:false, useCORS:true, backgroundColor:'#ffffff', scale:1,
-        ignoreElements: el => el.classList?.contains('export-ignore')
+        ignoreElements: el => (el && el.classList && el.classList.contains('export-ignore'))
       }).then(c=>c.toDataURL('image/png'));
       const a=document.createElement('a'); a.href=dataUrl; a.download='poster-web-'+state.size+'.png'; document.body.appendChild(a); a.click(); a.remove();
       status('Done.');
@@ -1337,5 +1334,6 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
 
 
