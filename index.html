@@ -257,25 +257,40 @@
     </aside>
   </main>
 
-  <footer class="fixed bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur z-50" id="actionBar">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
-      <div class="flex items-center gap-2 text-xs md:text-sm">
-        <span class="text-slate-600" id="statusMsg">Ready.</span>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <button id="btnSave"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Save Design</button>
-        <button id="btnLoad"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Load Design</button>
-        <button id="btnClear" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Clear Saved</button>
-
-        <span class="hidden md:inline w-px h-6 bg-slate-200 mx-1"></span>
-
-        <button id="btnWebPng"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Download Web PNG (1920px)</button>
-        <button id="btnPrintPng" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Print PNG (High-Res)</button>
-        <button id="btnPrintPdf" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Print-Ready PDF (Exact Inches)</button>
-        <div class="w-full text-xs md:text-sm text-slate-500">Best for FedEx/Staples/Office Depot printing.</div>
-      </div>
+<footer class="fixed bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur z-50" id="actionBar">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
+    <div class="flex items-center gap-2 text-xs md:text-sm">
+      <span class="text-slate-600" id="statusMsg">Ready.</span>
     </div>
-  </footer>
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="btnSave"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Save Design</button>
+      <button id="btnLoad"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Load Design</button>
+      <button id="btnClear" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Clear Saved</button>
+
+      <span class="hidden md:inline w-px h-6 bg-slate-200 mx-1"></span>
+
+      <button id="btnWebPng"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Download Web PNG (1920px)</button>
+      <button id="btnPrintPng" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Print PNG (High-Res)</button>
+      <button id="btnPrintPdf" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Print-Ready PDF (Exact Inches)</button>
+
+      <div class="w-full text-xs md:text-sm text-slate-500">Best for FedEx/Staples/Office Depot printing.</div>
+
+      <!-- Privacy note -->
+      <p id="privacy-note"
+         class="w-full flex items-start gap-2 text-xs md:text-sm text-slate-500 leading-snug">
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" class="mt-[1px]">
+          <path fill="currentColor"
+                d="M12 2a4 4 0 00-4 4v3H6a2 2 0 00-2 2v7a2 2 0 002 2h12a2 2 0 002-2v-7a2 2 0 00-2-2h-2V6a4 4 0 00-4-4zm2 7H10V6a2 2 0 114 0v3z"/>
+        </svg>
+        <span role="note" aria-live="polite">
+          All editing happens locally in your browser. Images and text are not uploaded to any server
+          (unless you choose to open an external link).
+        </span>
+      </p>
+      <!-- /Privacy note -->
+    </div>
+  </div>
+</footer>
 
   <div class="text-center py-3" style="border-top:1px solid #e2e8f0;background:#fff;">
     <p class="text-xs text-slate-500">
@@ -1338,6 +1353,7 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
 
 
 
