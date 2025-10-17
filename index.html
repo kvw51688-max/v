@@ -883,6 +883,10 @@ function clampPositionsToStage(){
       el.style.overflowWrap = 'anywhere';
     }
 
+          // ★ 关键新增：样式变化后重新测量尺寸，确保后续夹取用到最新宽高
+      r = el.getBoundingClientRect();
+    }
+
     // 解析当前位置（百分比）
     let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
     if (Number.isNaN(lp) || Number.isNaN(tp)) {
@@ -961,6 +965,11 @@ function clampPositionsToStage(){
   }
 
   btnWebPng.addEventListener('click', async()=>{
+      if (!window.html2canvas) { 
+    alert('Exporter is still loading, please try again in a moment.'); 
+    return; 
+  }
+    
     try{
       document.body.style.overflow='hidden';
       status('Generating web preview PNG…');
@@ -977,6 +986,11 @@ function clampPositionsToStage(){
   });
 
   btnPrintPng.addEventListener('click', async()=>{
+      if (!window.html2canvas) { 
+    alert('Exporter is still loading, please try again in a moment.'); 
+    return; 
+  }
+    
     if(!checkResolutionOk()) return;
     await withBusy(btnPrintPng, async()=>{
       try{
@@ -1323,4 +1337,5 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
 
