@@ -423,8 +423,17 @@ sizeSelect.addEventListener('change', (e) => {
   function isIOS(){ return /iP(hone|ad|od)/i.test(navigator.userAgent); }
   function lockScroll(){ document.body.style.overflow='hidden'; }
   function unlockScroll(){ document.body.style.overflow=''; }
-  function rgbToHex(rgb){ const m=rgb.match(/\\d+/g); if(!m) return '#000000'; const [r,g,b]=m.map(Number); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
-  function rgbToStyleHex(c){ if(!c) return '#000000'; if(c.startsWith('#')) return c; return rgbToHex(getComputedStyle(Object.assign(document.createElement('div'),{style:{color:c}})).color); }
+  function rgbToHex(rgb){ const m=rgb.match(/\d+/g); if(!m) return '#000000'; const [r,g,b]=m.map(Number); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+  function rgbToStyleHex(c){
+  if(!c) return '#000000';
+  if (c.startsWith('#')) return c;
+  const tmp = document.createElement('div');
+  tmp.style.color = c;                   // 正确地设置行内样式
+  document.body.appendChild(tmp);        // 可选：挂到文档，提升兼容性
+  const computed = getComputedStyle(tmp).color;
+  tmp.remove();
+  return rgbToHex(computed);
+}
   async function ensureFontsReady(){ if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch(_){} } }
   function getPoint(e){ if(e.touches&&e.touches[0]) return {x:e.touches[0].clientX,y:e.touches[0].clientY}; return {x:e.clientX,y:e.clientY};}
   // === parsePercent helper ===
@@ -858,35 +867,53 @@ guideSelect.addEventListener('change', () => {
     }
     return { leftPercent: lp, topPercent: tp };
   }
-  function clampPositionsToStage(){
-      const b = previewStage.getBoundingClientRect();
-      for (const el of Object.values(texts)) {
-          const r = el.getBoundingClientRect();
+function clampPositionsToStage(){
+  const b = previewStage.getBoundingClientRect();
 
-// --- Overflow wrap fix：文本比舞台更宽时，改为自动换行并限制最大宽度
-if (r.width >= b.width) {
-  const isMobileNarrow = b.width <= 480;
-  const capPct = isMobileNarrow ? 96 : 92;   // 与 applyEditorTo 保持一致
-  el.style.maxWidth = capPct + '%';
-  el.style.whiteSpace = 'pre-wrap';
-  el.style.wordBreak = 'break-word';
-  el.style.overflowWrap = 'anywhere';
-  // 不再强制 left=50% 或 continue；让其继续走下方常规夹取逻辑
-}
+  for (const el of Object.values(texts)) {
+    const r = el.getBoundingClientRect();
 
-    // —— 原有常规夹取逻辑 ——
+    // 仍然保留：文本过宽时自动换行并限制最大宽度
+    if (r.width >= b.width) {
+      const isMobileNarrow = b.width <= 480;
+      const capPct = isMobileNarrow ? 96 : 92;   // 与 applyEditorTo 保持一致
+      el.style.maxWidth   = capPct + '%';
+      el.style.whiteSpace = 'pre-wrap';
+      el.style.wordBreak  = 'break-word';
+      el.style.overflowWrap = 'anywhere';
+    }
+
+    // 解析当前位置（百分比）
     let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
     if (Number.isNaN(lp) || Number.isNaN(tp)) {
       const p = getInlineLeftTop(el, b);
       lp = p.leftPercent; tp = p.topPercent;
     }
-    const maxLeftP = Math.max(0, (b.width  - r.width ) / b.width  * 100);
-    const maxTopP  = Math.max(0, (b.height - r.height) / b.height * 100);
-    lp = Math.min(Math.max(lp, 0), maxLeftP);
-    tp = Math.min(Math.max(tp, 0), maxTopP);
 
-    el.style.left = `${lp}%`;
-    el.style.top  = `${tp}%`;
+    // 关键改动：区分“居中”和“非居中”
+    const isCenterTrans = (el.style.transform || '').includes('translateX(-50%)');
+
+    if (isCenterTrans) {
+      // 居中：left% 是“中心点”，限制中心点在 [半宽, 100-半宽] 区间
+      const halfWPercent = (r.width / 2) / b.width * 100;
+      const minCenter = Math.max(0, halfWPercent);
+      const maxCenter = Math.min(100, 100 - halfWPercent);
+      lp = Math.min(Math.max(lp, minCenter), maxCenter);
+      el.style.left = `${lp}%`;
+      // transform 保持不变（继续使用 translateX(-50%)）
+    } else {
+      // 非居中：left% 作为“左边缘”
+      const maxLeftP = Math.max(0, (b.width - r.width) / b.width * 100);
+      lp = Math.min(Math.max(lp, 0), maxLeftP);
+      el.style.left = `${lp}%`;
+    }
+
+    // 纵向：一律把 top% 当“上边缘”来夹取
+    const maxTopP = Math.max(0, (b.height - r.height) / b.height * 100);
+    tp = Math.min(Math.max(tp, 0), maxTopP);
+    el.style.top = `${tp}%`;
+
+    // 同步数据集
     el.dataset.leftPercent = lp.toFixed(6);
     el.dataset.topPercent  = tp.toFixed(6);
   }
@@ -1012,63 +1039,72 @@ if (r.width >= b.width) {
 
     await new Promise(res=>{ if(!img.src){ res(); return; } img.onload=res; img.onerror=res; });
 
-    for(const id of ['t1','t2','t3']){
-      const src=texts[id];
-      const srec=src.getBoundingClientRect();
-      const cs=getComputedStyle(src);
-      const el=document.createElement('div');
-      el.textContent=src.textContent;
-      el.style.position='absolute';
-      
-      // 修复高 DPI 导出时文本错位问题
-      const leftPx = (srec.left - pr.left + window.scrollX) * sx;
-      const topPx  = (srec.top  - pr.top  + window.scrollY) * sy;
-      el.style.left = leftPx + 'px';
-      el.style.top  = topPx  + 'px';
+for (const id of ['t1','t2','t3']) {
+  const src  = texts[id];
+  const srec = src.getBoundingClientRect();
+  const cs   = getComputedStyle(src);
+  const el   = document.createElement('div');
 
-      // 若原始元素带有 translateX(-50%)，则补回 transform
-      if (getComputedStyle(src).transform.includes('translateX')) {
-        el.style.transform = 'translateX(-50%)';
-      }
+  el.textContent = src.textContent;
+  el.style.position = 'absolute';
 
-      // lock width to on-screen width to preserve text wrapping when exporting
-      el.style.width = (srec.width * sx) + 'px';
-      el.style.overflowWrap = 'anywhere';
-      el.style.wordBreak = 'break-word';
-      // —— 计算字号与行高（关键修复）——
-      const fsPx = parseFloat(cs.fontSize) || 16;     // 屏幕上的字号(px)
-      const lhCss = cs.lineHeight;
+  // 位置：不要加 window.scrollX/Y
+  const leftPx = (srec.left - pr.left) * sx;
+  const topPx  = (srec.top  - pr.top ) * sy;
+  el.style.left = leftPx + 'px';
+  el.style.top  = topPx  + 'px';
 
-      // 将“normal/无单位/px/%”统一为像素行高
-      let linePx;
-      if (lhCss === 'normal') {
-        linePx = fsPx * 1.3;                          // 略宽，避免挤行
-      } else if (lhCss.endsWith && lhCss.endsWith('px')) {
-        linePx = parseFloat(lhCss) || fsPx * 1.3;
-      } else {
-        const n = parseFloat(lhCss);                   // 无单位或百分比按倍数处理
-        linePx = Number.isFinite(n) ? fsPx * n : fsPx * 1.3;
-      }
+  // 如果原元素是居中（行内样式带 translateX(-50%)），导出时补回
+  if ((src.style.transform || '').includes('translateX')) {
+    el.style.transform = 'translateX(-50%)';
+  }
 
-      // —— 使用与位置/宽度一致的缩放（sx）——
-      const outFontSize = fsPx * sx;
-      const outLinePx   = linePx * sx;
+  // 锁定导出宽度 = 屏幕宽度 * sx，确保换行一致
+  el.style.width       = (srec.width * sx) + 'px';
+  el.style.whiteSpace  = 'pre-wrap';
+  el.style.wordBreak   = 'break-word';
+  el.style.overflowWrap= 'anywhere';
 
-      el.style.fontSize   = outFontSize + 'px';
-      el.style.lineHeight = outLinePx   + 'px';       // 用像素行高，避免高 DPI 叠行
-      el.style.fontFamily=cs.fontFamily;
-      el.style.color=cs.color;
-      el.style.fontWeight=cs.fontWeight;
-      el.style.fontStyle=cs.fontStyle;
-      el.style.textDecoration=cs.textDecoration;
-      el.style.textAlign=cs.textAlign;
-      el.style.whiteSpace=cs.whiteSpace||'pre-wrap';
-      let sds = parseInt(src.dataset.shadowS||'0',10);
-      let sblur = parseFloat(src.dataset.shadowBlur||'0');
-      let scolor = src.dataset.shadowColor || '#000';
-      if(sds>0){ const off=Math.max(1,Math.round(sds/10))*k; const bl=Math.max(0.5,sblur*k); el.style.textShadow=`${off}px ${off}px ${bl}px ${scolor}`; }
-      wrap.appendChild(el);
-    }
+  // 计算字号与行高（把各种行高统一成像素）
+  const fsPx  = parseFloat(cs.fontSize) || 16;
+  const lhCss = cs.lineHeight;
+  let linePx;
+  if (lhCss === 'normal') {
+    linePx = fsPx * 1.3;
+  } else if (lhCss.endsWith && lhCss.endsWith('px')) {
+    linePx = parseFloat(lhCss) || fsPx * 1.3;
+  } else {
+    const n = parseFloat(lhCss);
+    linePx = Number.isFinite(n) ? fsPx * n : fsPx * 1.3;
+  }
+
+  // 垂直量用 sy（关键）
+  const outFontSize = fsPx  * sy;
+  const outLinePx   = linePx * sy;
+
+  el.style.fontSize   = outFontSize + 'px';
+  el.style.lineHeight = outLinePx   + 'px';
+
+  // 其它样式一比一拷贝
+  el.style.fontFamily   = cs.fontFamily;
+  el.style.color        = cs.color;
+  el.style.fontWeight   = cs.fontWeight;
+  el.style.fontStyle    = cs.fontStyle;
+  el.style.textDecoration = cs.textDecoration;
+  el.style.textAlign    = cs.textAlign;
+
+  // 阴影随垂直缩放更自然（也可用 k，看你的审美）
+  const sds   = parseInt(src.dataset.shadowS || '0', 10);
+  const sblur = parseFloat(src.dataset.shadowBlur || '0');
+  const scolor= src.dataset.shadowColor || '#000';
+  if (sds > 0) {
+    const off = Math.max(1, Math.round(sds/10)) * sy;
+    const bl  = Math.max(0.5, sblur * sy);
+    el.style.textShadow = `${off}px ${off}px ${bl}px ${scolor}`;
+  }
+
+  wrap.appendChild(el);
+}
 
     if(includeGuides){
       const safe = Math.max(0, parseFloat(safeIn.value)||0);
@@ -1287,6 +1323,4 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
-
-
 
