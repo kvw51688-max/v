@@ -1065,10 +1065,18 @@ for (const id of ['t1','t2','t3']) {
   el.style.left = leftPx + 'px';
   el.style.top  = topPx  + 'px';
 
-  // 如果原元素是居中（行内样式带 translateX(-50%)），导出时补回
-  if ((src.style.transform || '').includes('translateX')) {
-    el.style.transform = 'translateX(-50%)';
-  }
+// 如果原元素是居中（行内样式带 translateX(-50%)），导出时补回
+if ((src.style.transform || '').includes('translateX')) {
+  // 🧠 修正偏移问题：将 left 调整为中心点，而非左边缘
+  const centerLeft = (srec.left - pr.left) + srec.width / 2;
+  const leftPx = (centerLeft / pr.width) * W - (srec.width * sx / 2);
+  el.style.left = leftPx + 'px';
+  el.style.transform = 'translateX(-50%)';
+} else {
+  // 非居中：按正常左上角坐标计算
+  const leftPx = (srec.left - pr.left) * sx;
+  el.style.left = leftPx + 'px';
+}
 
   // 锁定导出宽度 = 屏幕宽度 * sx，确保换行一致
   el.style.width       = (srec.width * sx) + 'px';
@@ -1334,6 +1342,7 @@ try { for (const f of document.fonts) { console.log('[font]', f.family, f.status
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
 
 
 
