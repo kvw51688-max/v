@@ -7,6 +7,8 @@
   <base href="./">
 
   <!-- Tailwind -->
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- html2canvas & jsPDF -->
@@ -61,7 +63,7 @@
       <h1 class="text-lg md:text-xl font-semibold">DIY Poster Creator – Lerine Studio</h1>
       <div class="flex items-center gap-2 text-sm">
         <span class="px-2 py-1 rounded bg-slate-100">24×30 / 24×50 in</span>
-        <span class="hidden md:inline text-slate-500">Preview 1920px • Print 300/200 dpi</span>
+        <span class="hidden md:inline text-slate-500">Print 300/200 dpi</span>
       </div>
     </div>
   </header>
@@ -75,8 +77,9 @@
       </div>
 
       <div id="previewStage" class="rounded-lg shadow-sm bg-white">
-        <div id="previewBgWrap"><img id="previewBgImg" alt="background"></div>
-
+        <div id="previewBgWrap">
+  <img id="previewBgImg" alt="background" loading="eager" decoding="async" fetchpriority="high">
+</div>
         <div class="guide-center hidden export-ignore" id="guideH"></div>
         <div class="guide-center v hidden export-ignore" id="guideV"></div>
 
@@ -97,8 +100,8 @@
         <div>
           <label class="block text-sm font-medium mb-1">Poster Size (inches)</label>
           <select id="sizeSelect" class="w-full border rounded px-3 py-2">
-            <option value="24x30">24 × 30 in (preview 1920×2400)</option>
-            <option value="24x50">24 × 50 in (preview 1920×4000)</option>
+          <option value="24x30">24 × 30 in (responsive preview)</option>
+          <option value="24x50">24 × 50 in (responsive preview)</option>
           </select>
         </div>
 
@@ -240,11 +243,11 @@
 
           <div class="grid grid-cols-2 gap-2">
             <label class="inline-flex items-center gap-2">
-              <input type="checkbox" id="showGuides" checked />
+              <input type="checkbox" id="showGuides" />
               <span class="text-sm">Show Trim/Safe/Bleed guides (preview)</span>
             </label>
             <label class="inline-flex items-center gap-2">
-              <input type="checkbox" id="includeGuidesPdf" checked />
+              <input type="checkbox" id="includeGuidesPdf" />
               <span class="text-sm">Include guides in PDF export</span>
             </label>
           </div>
@@ -269,7 +272,7 @@
 
       <span class="hidden md:inline w-px h-6 bg-slate-200 mx-1"></span>
 
-      <button id="btnWebPng"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Download Web PNG (1920px)</button>
+      <button id="btnWebPng"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Download Web PNG</button>
       <button id="btnPrintPng" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Print PNG (High-Res)</button>
       <button id="btnPrintPdf" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Print-Ready PDF (Exact Inches)</button>
 
@@ -449,7 +452,6 @@ sizeSelect.addEventListener('change', (e) => {
   tmp.remove();
   return rgbToHex(computed);
 }
-  async function ensureFontsReady(){ if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch(_){} } }
   function getPoint(e){ if(e.touches&&e.touches[0]) return {x:e.touches[0].clientX,y:e.touches[0].clientY}; return {x:e.clientX,y:e.clientY};}
   // === parsePercent helper ===
   // 将 "50%" 转换为 50，非百分比返回 NaN，让调用方走回退逻辑
@@ -472,13 +474,9 @@ sizeSelect.addEventListener('change', (e) => {
     };
     state.size=v;
 if (v === '24x30') {
-  state.preview.width  = 1920;            // ← 新增这一行，保持宽度一致
-  state.preview.height = 2400;
   state.inches = { w:24, h:30 };
   previewStage.style.aspectRatio = '4/5';
 } else {
-  state.preview.width  = 1920;            // 与 24×30 的基准宽度一致
-  state.preview.height = 4000;            // 24×50 的高度
   state.inches = { w:24, h:50 };
   previewStage.style.aspectRatio = (24 / 50); // 用数值更稳
 }
@@ -751,22 +749,32 @@ document.querySelectorAll('.pickTarget').forEach(btn => {
     el.dataset.shadowBlur=String(bl);
     el.dataset.shadowColor=shadowColor.value;
   }
-  textContent.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
-  fontSize.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
-  fontColor.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
-  bold.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
-  italic.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
-  underline.addEventListener('change', ()=>applyEditorTo(state.activeTextId));
+    // === Debounce editor updates into next animation frame ===
+let _rafToken = null;
+function applyEditorToDebounced(id) {
+  if (_rafToken) return;
+  _rafToken = requestAnimationFrame(() => {
+    _rafToken = null;
+    applyEditorTo(id);
+    clampPositionsToStage();
+  });
+}
+  textContent.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
+  fontSize.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
+  fontColor.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
+  bold.addEventListener('change', ()=>applyEditorToDebounced(state.activeTextId));
+  italic.addEventListener('change', ()=>applyEditorToDebounced(state.activeTextId));
+  underline.addEventListener('change', ()=>applyEditorToDebounced(state.activeTextId));
   fontFamily.addEventListener('change', ()=>{
-  // 1) 立即应用——先让 UI 响应，不阻塞等待字体文件
-  applyEditorTo(state.activeTextId);
+  // 1) 立即合帧应用（不卡 UI）
+  applyEditorToDebounced(state.activeTextId);
 
   // 2) 若字体尚未加载，则在后台加载；加载完成后再补一次渲染
   try {
     const famName = (fontFamily.value.split(',')[0] || '').replace(/['"]/g,'').trim();
     if (document.fonts && !document.fonts.check(`400 16px ${famName}`)) {
       document.fonts.load(`400 16px ${famName}`)
-        .then(()=>applyEditorTo(state.activeTextId))
+        .then(()=>applyEditorToDebounced(state.activeTextId))
         .catch(()=>{ /* 忽略加载失败，保留系统回退字体 */ });
     }
   } catch(_) {}
@@ -774,7 +782,7 @@ document.querySelectorAll('.pickTarget').forEach(btn => {
 
 // Patch 1: align=center also centers the box
 align.addEventListener('change', ()=>{
-  applyEditorTo(state.activeTextId);
+  applyEditorToDebounced(state.activeTextId);
 
   const el = texts[state.activeTextId];
   if (!el) return;
@@ -791,7 +799,6 @@ align.addEventListener('change', ()=>{
 
   // 保持文本在舞台范围内
   normalizePercentPosition(el, previewStage);
-  clampPositionsToStage();
 });
 
 // === Center Guides toggle ===
@@ -801,9 +808,9 @@ guideSelect.addEventListener('change', () => {
   guideV.classList.toggle('hidden', !on);
 });
     
-  shadowStrength.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
-  shadowBlur.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
-  shadowColor.addEventListener('input', ()=>applyEditorTo(state.activeTextId));
+  shadowStrength.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
+  shadowBlur.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
+  shadowColor.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
 
   for(const el of Object.values(texts)) makeDraggable(el,previewStage);
   function makeDraggable(el,boundary){
@@ -985,7 +992,7 @@ function clampPositionsToStage(){
     try{
       document.body.style.overflow='hidden';
       status('Generating web preview PNG…');
-      await ensureFontsReady();
+      await waitActiveFontsWithTimeout(1200);
       const dataUrl=await html2canvas(previewStage,{
         allowTaint:false, useCORS:true, backgroundColor:'#ffffff', scale:1,
         ignoreElements: el => (el && el.classList && el.classList.contains('export-ignore'))
@@ -1007,7 +1014,7 @@ function clampPositionsToStage(){
     await withBusy(btnPrintPng, async()=>{
       try{
         status(`Rendering print PNG (${state.dpi} dpi)…`);
-        await ensureFontsReady();
+        await waitActiveFontsWithTimeout(1200);
         const dataUrl=await renderPrintCanvas(false).then(c=>c.toDataURL('image/png'));
         const a=document.createElement('a'); a.href=dataUrl; a.download='poster-print-'+state.size+'-'+state.dpi+'dpi.png'; document.body.appendChild(a); a.click(); a.remove();
         status('Done.');
@@ -1020,7 +1027,7 @@ function clampPositionsToStage(){
     await withBusy(btnPrintPdf, async()=>{
       try{
         status(`Rendering print PDF (${state.dpi} dpi, true inches)…`);
-        await ensureFontsReady();
+        await waitActiveFontsWithTimeout(1200);
         const canvas=await renderPrintCanvas(includeGuidesPdf.checked);
         const { jsPDF }=window.jspdf;
         const wIn=state.inches.w, hIn=state.inches.h;
@@ -1041,6 +1048,52 @@ function clampPositionsToStage(){
       alert('Export failed. Try 200 DPI or a smaller image. If the issue persists, try on a desktop.');
     }
   }
+
+    // === Wait only active fonts (family + weight + style) with timeout ===
+async function waitActiveFontsWithTimeout(timeoutMs = 1200) {
+  if (!document.fonts || !document.fonts.check) return;
+
+  // 收集舞台上 3 个文本框“实际正在使用”的 family / weight / style
+  const needLoads = new Set();
+  ['t1','t2','t3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cs = getComputedStyle(el);
+
+    // family
+    const famName = (cs.fontFamily.split(',')[0] || '').replace(/['"]/g,'').trim();
+    if (!famName) return;
+
+    // weight 归一：bold→700, normal→400，其它非数值→400
+    let w = cs.fontWeight;
+    if (w === 'bold') w = '700';
+    if (w === 'normal') w = '400';
+    if (!/^\d+$/.test(String(w))) w = '400';
+
+    // style（normal可省略；italic/oblique需保留）
+    let style = cs.fontStyle;
+    if (!style || style === 'normal') style = '';
+    else style = style + ' ';
+
+    // document.fonts.load 语法：[style] [weight] <size> <family>
+    needLoads.add(`${style}${w} 16px ${famName}`);
+  });
+
+  if (needLoads.size === 0) return;
+
+  const loads = [...needLoads].map(desc => document.fonts.load(desc));
+  const waitAll = Promise.allSettled(loads);
+  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('font-timeout')), timeoutMs));
+
+  try {
+    await Promise.race([waitAll, timeout]);
+  } catch (e) {
+    if (e && e.message === 'font-timeout') {
+      const keep = confirm('Fonts are still loading. Wait a bit longer for accurate export?\n\nOK = keep waiting\nCancel = export now (may use fallback fonts)');
+      if (keep) await waitAll;
+    }
+  }
+}
 
   async function renderPrintCanvas(includeGuides){
     const {w,h}=state.inches; let dpi=state.dpi;
@@ -1153,7 +1206,7 @@ if ((src.style.transform || '').includes('translateX(-50%)')) {
     printStage.appendChild(wrap);
     const canvas = await html2canvas(wrap, {
       allowTaint:false, useCORS:true, backgroundColor:'#ffffff', scale:1,
-      windowWidth:W, windowHeight:H, letterRendering:true
+      windowWidth:W, windowHeight:H,
     });
     return canvas;
   }
@@ -1346,16 +1399,9 @@ btnClear.addEventListener('click', () => {
   }
 })();
 // Font load quick check
-try { for (const f of document.fonts) { console.log('[font]', f.family, f.status); } } catch(_) {}
   </script>
 <!-- Export & App Scripts (placed at end for faster first paint) -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
-
-
-
-
-
-
