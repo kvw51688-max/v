@@ -173,7 +173,7 @@
     // Helper function to adjust export resolution for mobile
     function adjustExportResolution() {
       const isMobile = window.innerWidth <= 480;
-      return isMobile ? 1 : 2;  // Use a lower scale for mobile
+      return isMobile ? 1 : 2;  // Use a lower scale for mobile to speed up the download
     }
 
     // Update canvas generation for different device resolutions
@@ -189,7 +189,7 @@
       return canvas;
     }
 
-    // Function to download image as PNG
+    // Function to handle downloading the PNG file with optimized resolution
     async function downloadPNG() {
       try {
         const canvas = await generateCanvas();
@@ -207,7 +207,7 @@
       }
     }
 
-    // Function to download PDF
+    // Function to handle downloading the PDF file
     async function downloadPDF() {
       try {
         const canvas = await generateCanvas();
@@ -228,7 +228,7 @@
     btnPrintPng.addEventListener('click', downloadPNG);
     btnPrintPdf.addEventListener('click', downloadPDF);
 
-    // Function to cache background image
+    // Function to cache background image to improve loading time
     function cacheBackgroundImage(src) {
       const img = new Image();
       img.src = src;
@@ -248,7 +248,7 @@
       }
     }
 
-    // Apply background image to the preview
+    // Apply the cached or default background image
     function applyPreviewBg() {
       previewBgImg.onload = () => {
         loadCachedBackground();
