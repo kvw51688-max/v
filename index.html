@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
-  <title>DIY Poster Creator — GH Pages Ready (Patched)</title>
+  <title>DIY Poster Creator – Lerine Studio</title>
   <base href="./">
 
   <!-- Tailwind -->
@@ -14,31 +14,21 @@
   <!-- html2canvas & jsPDF -->
   <link rel="preload" href="fonts/inter/inter-regular.woff2" as="font" type="font/woff2" crossorigin>
   <style>
-    /* Local font faces (exactly as in your repo) */
     @font-face { font-family: 'Inter'; src: url('fonts/inter/inter-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Baloo2'; src: url('fonts/baloo2/baloo2-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-
-    /* Other styles omitted for brevity */
+    /* Other font faces omitted for brevity */
+    .draggable{ position:absolute; cursor:move; user-select:none; touch-action:none; }
+    #previewStage{ width:100%; max-width:960px; margin:0 auto; aspect-ratio:4/5; position:relative; background:#fff; border:1px dashed #cbd5e1; overflow:hidden; }
+    #previewBgWrap{ position:absolute; inset:0; overflow:hidden; background:#f3f4f6; }
+    #previewBgImg{ width:100%; height:100%; object-fit:cover; display:block; }
 
     /* Mobile Optimization */
     @media (max-width: 480px) {
-      #previewStage {
-        max-width: 100%;
-        aspect-ratio: 4/5;
-      }
-      .btn {
-        width: auto; /* Make buttons responsive */
-      }
-    }
-
-    /* General responsive styling for better mobile experience */
-    .w-full {
-      width: 100%;
+      #previewStage { max-width: 100%; }
+      .btn { width: auto; }
     }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
-  <!-- iOS Notice -->
   <div id="iosNotice" class="hidden bg-yellow-50 text-yellow-900 text-sm px-4 py-2">
     Notice: Detected iOS device. If the downloaded print file fails or appears blank, please try setting DPI to 200, or <b>use a computer</b> to export again.
     <button id="closeIosNotice" class="float-right text-yellow-800 hover:underline">Close</button>
@@ -47,10 +37,6 @@
   <header class="border-b bg-white sticky top-0 z-30">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
       <h1 class="text-lg md:text-xl font-semibold">DIY Poster Creator – Lerine Studio</h1>
-      <div class="flex items-center gap-2 text-sm">
-        <span class="px-2 py-1 rounded bg-slate-100">24×30 / 24×50 in</span>
-        <span class="hidden md:inline text-slate-500">Print 300/200 dpi</span>
-      </div>
     </div>
   </header>
 
@@ -58,22 +44,12 @@
     <section class="lg:col-span-8">
       <div id="tipBar" class="mb-3 text-xs md:text-sm p-2 rounded border bg-blue-50 text-blue-800">
         Click a text to select; <b>double-click</b> (desktop) or <b>long-press 0.6s</b> (mobile) to edit inline.
-        Press <kbd>Esc</kbd> or tap outside to finish. Export at <b>300 dpi</b> (auto-fall back to <b>200 dpi</b> if too large).
-        <span class="ml-1 text-yellow-700"><b>Note for iOS:</b> If export fails, set 200 dpi or <b>use a computer</b>.</span>
       </div>
 
       <div id="previewStage" class="rounded-lg shadow-sm bg-white">
         <div id="previewBgWrap">
           <img id="previewBgImg" alt="background" loading="eager" decoding="async" fetchpriority="high">
         </div>
-        <!-- Guides -->
-        <div id="guideH" class="guide-center hidden export-ignore"></div>
-        <div id="guideV" class="guide-center v hidden export-ignore"></div>
-
-        <div id="bleedGuide" class="guide-bleed hidden export-ignore" aria-hidden="true"></div>
-        <div id="trimGuide"  class="guide-trim  hidden export-ignore" aria-hidden="true"></div>
-        <div id="safeGuide"  class="guide-safe  hidden export-ignore" aria-hidden="true"></div>
-
         <div id="t1" class="draggable text-3xl font-bold" style="left:50%; top:20%; transform:translateX(-50%); text-align:center;">MAIN TITLE</div>
         <div id="t2" class="draggable text-xl" style="left:50%; top:35%; transform:translateX(-50%); text-align:center;">Subtitle goes here</div>
         <div id="t3" class="draggable text-base" style="left:50%; top:50%; transform:translateX(-50%); text-align:center;">Description or notes</div>
@@ -81,107 +57,206 @@
     </section>
 
     <aside class="lg:col-span-4">
-      <!-- Sidebar content omitted for brevity -->
-      <button id="btnSave" class="btn px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Save Design</button>
-      <button id="btnPrintPdf" class="btn px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Print-Ready PDF (Exact Inches)</button>
+      <div class="bg-white rounded-xl shadow p-4 space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Poster Size (inches)</label>
+          <select id="sizeSelect" class="w-full border rounded px-3 py-2">
+            <option value="24x30">24 × 30 in</option>
+            <option value="24x50">24 × 50 in</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-sm font-medium mb-1">Print DPI</label>
+            <select id="dpiSelect" class="w-full border rounded px-3 py-2">
+              <option value="300" selected>300 dpi (print-ready)</option>
+              <option value="200">200 dpi (lighter)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <label class="text-sm font-medium">Background</label>
+            <div class="flex items-center gap-2">
+              <input type="file" id="bgUpload" accept="image/*" class="block w-[180px] text-xs" />
+              <button id="resetBg" class="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-slate-200">Reset</button>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div id="thumbGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 rounded border bg-slate-50 p-2"></div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium">Edit Text</span>
+            <div class="text-xs space-x-1">
+              <button data-target="t1" class="pickTarget px-2 py-1 rounded bg-slate-100">Text 1</button>
+              <button data-target="t2" class="pickTarget px-2 py-1 rounded bg-slate-100">Text 2</button>
+              <button data-target="t3" class="pickTarget px-2 py-1 rounded bg-slate-100">Text 3</button>
+            </div>
+          </div>
+
+          <textarea id="textContent" rows="3" class="w-full border rounded px-3 py-2 text-sm" placeholder="Type here…"></textarea>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs mb-1">Font size (px)</label>
+              <input type="number" id="fontSize" class="w-full border rounded px-2 py-1 text-sm" value="36" min="8" max="300" />
+            </div>
+            <div>
+              <label class="block text-xs mb-1">Color</label>
+              <input type="color" id="fontColor" class="w-full h-[36px] border rounded" value="#111827" />
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium">Shadow</span>
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="block text-xs mb-1">Shadow strength</label>
+                <input type="range" id="shadowStrength" min="0" max="100" value="35" />
+              </div>
+              <div>
+                <label class="block text-xs mb-1">Shadow blur</label>
+                <input type="range" id="shadowBlur" min="0" max="30" value="10" />
+              </div>
+              <div>
+                <label class="block text-xs mb-1">Shadow color</label>
+                <input type="color" id="shadowColor" value="#000000" class="w-full h-[36px] border rounded" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3 border-t pt-3">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-sm font-medium mb-1">Safe Margin (in)</label>
+              <input type="number" id="safeIn" step="0.0625" value="0.5" class="w-full border rounded px-2 py-1" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Bleed (in)</label>
+              <input type="number" id="bleedIn" step="0.0625" value="0.125" class="w-full border rounded px-2 py-1" />
+            </div>
+          </div>
+        </div>
+      </div>
     </aside>
   </main>
 
   <footer class="fixed bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur z-50" id="actionBar">
-    <!-- Footer content omitted for brevity -->
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2 text-xs md:text-sm">
+        <span class="text-slate-600" id="statusMsg">Ready.</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btnSave"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Save Design</button>
+        <button id="btnLoad"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Load Design</button>
+        <button id="btnClear" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Clear Saved</button>
+
+        <span class="hidden md:inline w-px h-6 bg-slate-200 mx-1"></span>
+
+        <button id="btnWebPng"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Download Web PNG</button>
+        <button id="btnPrintPng" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Print PNG (High-Res)</button>
+        <button id="btnPrintPdf" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Print-Ready PDF (Exact Inches)</button>
+      </div>
+    </div>
   </footer>
 
   <script>
-    // === Mobile Optimizations ===
-    const isMobile = window.innerWidth <= 480;
-    if (isMobile) {
-      // Adjust DPI for iOS
-      if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
-        dpiSelect.value = '200'; // Automatically set DPI to 200 for iOS devices
-        setDpi(200);
-      }
-      // Adjust button sizes and layout for smaller screens
-      document.querySelectorAll('.text-xs').forEach(el => el.classList.add('text-sm'));
-      document.querySelectorAll('.w-full').forEach(el => el.classList.add('w-auto'));
+    // Helper function to adjust export resolution for mobile
+    function adjustExportResolution() {
+      const isMobile = window.innerWidth <= 480;
+      return isMobile ? 1 : 2;  // Use a lower scale for mobile
     }
 
-    // === Adjust layout for mobile ===
-    function adjustForMobile() {
-      if (window.innerWidth <= 480) {
-        previewStage.style.maxWidth = '100%';
-        dpiSelect.value = '200'; // Use 200 DPI on mobile for smoother exports
-        setDpi(200);
-      }
+    // Update canvas generation for different device resolutions
+    async function generateCanvas() {
+      const scale = adjustExportResolution(); 
+      const canvas = await html2canvas(previewStage, {
+        scale: scale,
+        backgroundColor: '#ffffff', 
+        useCORS: true,
+        allowTaint: false,
+        logging: false
+      });
+      return canvas;
     }
 
-    window.addEventListener('resize', adjustForMobile);
-    adjustForMobile(); // Initial check on load
-
-    // === DPI Settings ===
-    const dpiSelect = document.getElementById('dpiSelect');
-    dpiSelect.addEventListener('change', (e) => setDpi(e.target.value));
-
-    function setDpi(dpi) {
-      state.dpi = parseInt(dpi, 10);
-      updateSpecInfo();
-    }
-
-    function updateSpecInfo() {
-      const { w, h } = state.inches;
-      const printWpx = Math.round(w * state.dpi);
-      const printHpx = Math.round(h * state.dpi);
-      document.getElementById('specInfo').innerHTML = `<b>Spec:</b> Print ${w}×${h} in @ ${state.dpi} dpi → <b>${printWpx}×${printHpx} px</b>`;
-    }
-
-    // === Export to PNG (Web/Print) ===
-    const btnWebPng = document.getElementById('btnWebPng');
-    const btnPrintPng = document.getElementById('btnPrintPng');
-    const btnPrintPdf = document.getElementById('btnPrintPdf');
-
-    // Function to download PNG
-    btnWebPng.addEventListener('click', async () => {
+    // Function to download image as PNG
+    async function downloadPNG() {
       try {
-        const dataUrl = await html2canvas(previewStage, { backgroundColor: '#ffffff', scale: 1 }).then(c => c.toDataURL('image/png'));
+        const canvas = await generateCanvas();
+        const dataUrl = canvas.toDataURL("image/png");
         const a = document.createElement('a');
         a.href = dataUrl;
-        a.download = `poster-web-${state.size}.png`;
+        a.download = `poster-${state.size}.png`;
         document.body.appendChild(a);
         a.click();
         a.remove();
-      } catch (error) {
-        console.error("Error exporting PNG:", error);
+        status('Download successful.');
+      } catch (e) {
+        console.error('Error during PNG download', e);
+        status('Failed to generate PNG.');
       }
-    });
+    }
 
     // Function to download PDF
-    btnPrintPdf.addEventListener('click', async () => {
+    async function downloadPDF() {
       try {
-        const canvas = await renderPrintCanvas();
+        const canvas = await generateCanvas();
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'in', format: [state.inches.w, state.inches.h] });
-        const imgData = canvas.toDataURL('image/jpeg', 1);
+        const pdf = new jsPDF();
+        const imgData = canvas.toDataURL('image/jpeg');
         pdf.addImage(imgData, 'JPEG', 0, 0, state.inches.w, state.inches.h);
-        pdf.save(`poster-print-${state.size}-${state.dpi}dpi.pdf`);
-      } catch (error) {
-        console.error("Error exporting PDF:", error);
+        pdf.save(`poster-${state.size}-print.pdf`);
+        status('PDF download successful.');
+      } catch (e) {
+        console.error('Error during PDF download', e);
+        status('Failed to generate PDF.');
       }
-    });
-
-    // === PDF Export Helper ===
-    async function renderPrintCanvas() {
-      const { w, h } = state.inches;
-      const dpi = state.dpi;
-      const W = Math.round(w * dpi);
-      const H = Math.round(h * dpi);
-      const canvas = document.createElement('canvas');
-      canvas.width = W;
-      canvas.height = H;
-
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, W, H);
-      return canvas;
     }
+
+    // Export buttons
+    btnWebPng.addEventListener('click', downloadPNG);
+    btnPrintPng.addEventListener('click', downloadPNG);
+    btnPrintPdf.addEventListener('click', downloadPDF);
+
+    // Function to cache background image
+    function cacheBackgroundImage(src) {
+      const img = new Image();
+      img.src = src;
+      img.onload = function () {
+        localStorage.setItem('bgImageCache', src);
+      };
+    }
+
+    // Function to load cached background image
+    function loadCachedBackground() {
+      const cachedImage = localStorage.getItem('bgImageCache');
+      if (cachedImage) {
+        previewBgImg.src = cachedImage;
+      } else {
+        previewBgImg.src = state.preview.bgSmall || DEFAULT_BG[state.size].small;
+        cacheBackgroundImage(previewBgImg.src);
+      }
+    }
+
+    // Apply background image to the preview
+    function applyPreviewBg() {
+      previewBgImg.onload = () => {
+        loadCachedBackground();
+      };
+      previewBgImg.src = state.preview.bgSmall || DEFAULT_BG[state.size].small;
+    }
+
+    loadCachedBackground();
   </script>
 </body>
 </html>
