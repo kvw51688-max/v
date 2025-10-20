@@ -13,18 +13,34 @@
   <!-- Tailwind CSS (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- 关键：离线缓存、CDN预加载 -->
-  <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-
   <style>
     /* PWA & 离线字体加载 */
-    @font-face { font-family: 'Inter'; src: url('fonts/inter/inter-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
-    @font-face { font-family: 'Baloo2'; src: url('fonts/baloo2/baloo2-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face {
+      font-family: 'Inter';
+      src: url('fonts/inter/inter-regular.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap; /* 使用系统字体，待自定义字体加载完成后替换 */
+    }
 
     /* 动画过渡 */
     .draggable { position: absolute; cursor: move; user-select: none; transition: box-shadow .15s ease, outline-color .15s ease; }
+
+    /* 背景图适配 */
+    #previewBgWrap {
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    /* 图像响应式 */
+    @media (max-width: 768px) {
+      #previewBgWrap {
+        height: 80vh;
+      }
+    }
   </style>
 
   <!-- PWA Service Worker & Caching -->
@@ -60,9 +76,7 @@
       </div>
 
       <div id="previewStage" class="rounded-lg shadow-sm bg-white">
-        <div id="previewBgWrap">
-          <img id="previewBgImg" alt="background" loading="lazy" decoding="async" fetchpriority="high">
-        </div>
+        <div id="previewBgWrap" style="background-image: url('assets/24-30-1.webp');"></div>
 
         <div class="guide-center hidden export-ignore" id="guideH"></div>
         <div class="guide-center v hidden export-ignore" id="guideV"></div>
