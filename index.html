@@ -2,23 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
-  <title>DIY Poster Creator — GH Pages Ready (Patched)</title>
+  <!-- 关键：移动端缩放与 viewport 锁定，避免 iOS 缩放抖动 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#ffffff">
+
+  <title>DIY Poster Creator — Mobile/Desktop Ready</title>
   <base href="./">
 
-  <!-- Tailwind -->
+  <!-- Tailwind (CDN) -->
   <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
   <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- html2canvas & jsPDF -->
+  <!-- 关键补充：导出依赖（异步加载，按钮会自检是否就绪） -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <!-- 预载字体（与仓库路径一致） -->
   <link rel="preload" href="fonts/inter/inter-regular.woff2" as="font" type="font/woff2" crossorigin>
-<!-- Local Fonts preloads (relative paths; safe for GitHub Pages subpaths) -->
 
   <style>
-    
-  /* ===== Local font faces (exactly as in your repo) ===== */
-  
+    /* 本地字体声明（路径保持与你仓库一致） */
     @font-face { font-family: 'Inter'; src: url('fonts/inter/inter-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Baloo2'; src: url('fonts/baloo2/baloo2-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Bangers'; src: url('fonts/bangers/bangers-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
@@ -32,13 +37,14 @@
     @font-face { font-family: 'Pacifico'; src: url('fonts/pacifico/pacifico-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Playfair Display'; src: url('fonts/playfairdisplay/playfairdisplay-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
 
-    .draggable{ position:absolute; cursor:move; user-select:none; touch-action:none; white-space:pre-wrap; line-height:normal; transition: box-shadow .15s ease, outline-color .15s ease, outline-offset .15s ease; }
+    /* 舞台与可拖拽文字的基础样式 */
+    .draggable{ position:absolute; cursor:move; user-select:none; touch-action:none; white-space:pre-wrap; line-height:normal; transition: box-shadow .15s ease, outline-color .15s ease, outline-offset .15s ease; will-change: transform; }
     .draggable.active{ outline:2px dashed #6366f1; outline-offset:2px; }
     .draggable.editing{ cursor:text; outline:2px solid #6366f1; outline-offset:2px; box-shadow: 0 0 0 4px rgba(99,102,241,.15); }
 
-    #previewStage{ width:100%; max-width:960px; margin:0 auto; aspect-ratio:4/5; position:relative; background:#fff; border:1px dashed #cbd5e1; overflow:hidden; }
+    #previewStage{ width:100%; max-width:960px; margin:0 auto; aspect-ratio:4/5; position:relative; background:#fff; border:1px dashed #cbd5e1; overflow:hidden; -webkit-font-smoothing:antialiased; }
     #previewBgWrap{ position:absolute; inset:0; overflow:hidden; background:#f3f4f6; }
-    #previewBgImg{ width:100%; height:100%; object-fit:cover; display:block; }
+    #previewBgImg{ width:100%; height:100%; object-fit:cover; display:block; image-rendering:auto; }
 
     .guide-center{ position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(0,0,0,.08); }
     .guide-center.v{ top:0; bottom:0; left:50%; width:1px; height:auto; }
@@ -50,11 +56,17 @@
     #statusMsg{ position: static; background: transparent; color: #64748b; padding: 0; border-radius: 0; font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; pointer-events: none; z-index: 10; }
     footer { border-top:1px solid #e2e8f0; background:#fff; font-size:12px; color:#64748b; }
     footer a { color:#0ea5e9; text-decoration:none; } footer a:hover { text-decoration:underline; }
+
+    /* 低性能设备减少动效 */
+    @media (prefers-reduced-motion: reduce){
+      .draggable{ transition:none }
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
+  <!-- iOS 提示（移动端稳定性） -->
   <div id="iosNotice" class="hidden bg-yellow-50 text-yellow-900 text-sm px-4 py-2">
-    Notice: Detected iOS device. If the downloaded print file fails or appears blank, please try setting DPI to 200, or <b>use a computer</b> to export again.
+    Notice: Detected iOS device. If the downloaded print file fails or appears blank, set DPI to 200, or <b>use a computer</b>.
     <button id="closeIosNotice" class="float-right text-yellow-800 hover:underline">Close</button>
   </div>
 
@@ -72,14 +84,14 @@
     <section class="lg:col-span-8">
       <div id="tipBar" class="mb-3 text-xs md:text-sm p-2 rounded border bg-blue-50 text-blue-800">
         Click a text to select; <b>double-click</b> (desktop) or <b>long-press 0.6s</b> (mobile) to edit inline.
-        Press <kbd>Esc</kbd> or tap outside to finish. Export at <b>300 dpi</b> (auto-fall back to <b>200 dpi</b> if too large).
-        <span class="ml-1 text-yellow-700"><b>Note for iOS:</b> If export fails, set 200 dpi or <b>use a computer</b>.</span>
+        Export at <b>300 dpi</b> (auto-fallback to <b>200 dpi</b> on iOS/very large canvas).
       </div>
 
       <div id="previewStage" class="rounded-lg shadow-sm bg-white">
         <div id="previewBgWrap">
-  <img id="previewBgImg" alt="background" loading="eager" decoding="async" fetchpriority="high">
-</div>
+          <img id="previewBgImg" alt="background" loading="eager" decoding="async" fetchpriority="high">
+        </div>
+
         <div class="guide-center hidden export-ignore" id="guideH"></div>
         <div class="guide-center v hidden export-ignore" id="guideV"></div>
 
@@ -87,6 +99,7 @@
         <div id="trimGuide"  class="guide-trim  hidden export-ignore" aria-hidden="true"></div>
         <div id="safeGuide"  class="guide-safe  hidden export-ignore" aria-hidden="true"></div>
 
+        <!-- 可拖拽文字（默认居中模板） -->
         <div id="t1" class="draggable text-3xl font-bold" style="left:50%; top:20%; transform:translateX(-50%); text-align:center;">MAIN TITLE</div>
         <div id="t2" class="draggable text-xl" style="left:50%; top:35%; transform:translateX(-50%); text-align:center;">Subtitle goes here</div>
         <div id="t3" class="draggable text-base" style="left:50%; top:50%; transform:translateX(-50%); text-align:center;">Description or notes</div>
@@ -100,8 +113,8 @@
         <div>
           <label class="block text-sm font-medium mb-1">Poster Size (inches)</label>
           <select id="sizeSelect" class="w-full border rounded px-3 py-2">
-          <option value="24x30">24 × 30 in (responsive preview)</option>
-          <option value="24x50">24 × 50 in (responsive preview)</option>
+            <option value="24x30">24 × 30 in</option>
+            <option value="24x50">24 × 50 in</option>
           </select>
         </div>
 
@@ -109,7 +122,7 @@
           <div>
             <label class="block text-sm font-medium mb-1">Print DPI</label>
             <select id="dpiSelect" class="w-full border rounded px-3 py-2">
-              <option value="300" selected>300 dpi (print-ready)</option>
+              <option value="300" selected>300 dpi</option>
               <option value="200">200 dpi (lighter)</option>
             </select>
           </div>
@@ -122,6 +135,7 @@
           </div>
         </div>
 
+        <!-- 背景选择与素材库分页 -->
         <div class="space-y-2">
           <div class="flex items-center justify-between gap-2">
             <label class="text-sm font-medium">Background</label>
@@ -144,11 +158,10 @@
             </div>
           </div>
 
-          <p class="text-xs text-slate-500">
-            Tip: Thumbnails are lazy-loaded. Print uses original at 300/200 dpi. Local uploads are embedded.
-          </p>
+          <p class="text-xs text-slate-500">Thumbnails are lazy-loaded. Print uses original at 300/200 dpi. Local uploads are embedded.</p>
         </div>
 
+        <!-- 文字布局与样式 -->
         <div class="space-y-1">
           <label class="block text-sm font-medium mb-1">Text Layout Template</label>
           <div class="flex flex-wrap gap-2 text-xs">
@@ -184,22 +197,20 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block text-xs mb-1">Font family</label>
-              
-<select id="fontFamily" class="w-full border rounded px-2 py-1 text-sm">
-  <option value="'Inter', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Inter (Sans)</option>
-  <option value="'Baloo2', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Baloo2 (Rounded Sans)</option>
-  <option value="'Bangers', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Bangers (Display)</option>
-  <option value="'Chewy', 'Comic Sans MS', cursive">Chewy (Handwriting)</option>
-  <option value="'Creepster', 'Comic Sans MS', cursive">Creepster (Display)</option>
-  <option value="'DM Serif Display', serif">DM Serif Display (Serif)</option>
-  <option value="'Manrope', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Manrope (Sans)</option>
-  <option value="'Noto Sans Display', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Noto Sans Display (Sans)</option>
-  <option value="'Playfair Display', serif">Playfair Display (Serif)</option>
-  <option value="'Pacifico', 'Comic Sans MS', cursive">Pacifico (Handwriting)</option>
-  <option value="'Dancing Script', 'Comic Sans MS', cursive">Dancing Script (Handwriting)</option>
-  <option value="'Great Vibes', 'Comic Sans MS', cursive">Great Vibes (Handwriting)</option>
-</select>
-
+              <select id="fontFamily" class="w-full border rounded px-2 py-1 text-sm">
+                <option value="'Inter', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Inter (Sans)</option>
+                <option value="'Baloo2', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Baloo2</option>
+                <option value="'Bangers', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Bangers</option>
+                <option value="'Chewy', 'Comic Sans MS', cursive">Chewy</option>
+                <option value="'Creepster', 'Comic Sans MS', cursive">Creepster</option>
+                <option value="'DM Serif Display', serif">DM Serif Display</option>
+                <option value="'Manrope', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Manrope</option>
+                <option value="'Noto Sans Display', system-ui, -apple-system, Segoe UI, Arial, sans-serif">Noto Sans Display</option>
+                <option value="'Playfair Display', serif">Playfair Display</option>
+                <option value="'Pacifico', 'Comic Sans MS', cursive">Pacifico</option>
+                <option value="'Dancing Script', 'Comic Sans MS', cursive">Dancing Script</option>
+                <option value="'Great Vibes', 'Comic Sans MS', cursive">Great Vibes</option>
+              </select>
             </div>
             <div class="flex flex-wrap items-center gap-2 text-xs">
               <label class="inline-flex items-center gap-1 mt-6"><input type="checkbox" id="bold"> Bold</label>
@@ -229,6 +240,7 @@
           </div>
         </div>
 
+        <!-- 导出 & 指南 -->
         <div class="space-y-3 border-t pt-3">
           <div class="grid grid-cols-2 gap-2">
             <div>
@@ -253,1155 +265,715 @@
           </div>
 
           <p class="text-xs text-slate-500">
-            Print tips: common shops (FedEx/Staples) prefer 0.125–0.25 in bleed, 0.25–0.5 in safe margin. Use 200 dpi for very long posters on mobile.
+            Print tips: common shops prefer 0.125–0.25 in bleed, 0.25–0.5 in safe margin. On iOS for very long posters, pick 200 dpi.
           </p>
         </div>
       </div>
     </aside>
   </main>
 
-<footer class="fixed bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur z-50" id="actionBar">
-  <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
-    <div class="flex items-center gap-2 text-xs md:text-sm">
-      <span class="text-slate-600" id="statusMsg">Ready.</span>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <button id="btnSave"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Save Design</button>
-      <button id="btnLoad"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Load Design</button>
-      <button id="btnClear" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Clear Saved</button>
+  <!-- 固定操作条 -->
+  <footer class="fixed bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur z-50" id="actionBar">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2 text-xs md:text-sm">
+        <span class="text-slate-600" id="statusMsg">Ready.</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btnSave"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Save Design</button>
+        <button id="btnLoad"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Load Design</button>
+        <button id="btnClear" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Clear Saved</button>
 
-      <span class="hidden md:inline w-px h-6 bg-slate-200 mx-1"></span>
+        <span class="hidden md:inline w-px h-6 bg-slate-200 mx-1"></span>
 
-      <button id="btnWebPng"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Download Web PNG</button>
-      <button id="btnPrintPng" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Print PNG (High-Res)</button>
-      <button id="btnPrintPdf" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Print-Ready PDF (Exact Inches)</button>
+        <button id="btnWebPng"  class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Download Web PNG</button>
+        <button id="btnPrintPng" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Print PNG (High-Res)</button>
+        <button id="btnPrintPdf" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Print-Ready PDF</button>
 
-      <div class="w-full text-xs md:text-sm text-slate-500">Best for FedEx/Staples/Office Depot printing.</div>
-
-      <!-- Privacy note -->
-      <p id="privacy-note"
-         class="w-full flex items-start gap-2 text-xs md:text-sm text-slate-500 leading-snug">
-        <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" class="mt-[1px]">
-          <path fill="currentColor"
-                d="M12 2a4 4 0 00-4 4v3H6a2 2 0 00-2 2v7a2 2 0 002 2h12a2 2 0 002-2v-7a2 2 0 00-2-2h-2V6a4 4 0 00-4-4zm2 7H10V6a2 2 0 114 0v3z"/>
-        </svg>
-        <span role="note" aria-live="polite">
-          All editing happens locally in your browser. Images and text are not uploaded to any server
-          (unless you choose to open an external link).
-        </span>
-      </p>
-      <!-- /Privacy note -->
-    </div>
-  </div>
-</footer>
-
-  <div class="text-center py-3" style="border-top:1px solid #e2e8f0;background:#fff;">
-    <p class="text-xs text-slate-500">
-      Fonts by <a href="https://fonts.google.com/" target="_blank" rel="noopener noreferrer">Google Fonts</a>
-      (<a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener noreferrer">Open Font License</a>)
-    </p>
-  </div>
-
-  <!-- ===== Brand Store Highlight Section (export-ignore) ===== -->
-<div class="export-ignore text-center py-6 bg-blue-50 border-t border-blue-200">
-<p class="text-base md:text-lg font-semibold text-gray-700 flex justify-center items-center gap-2">
-  <img src="assets/logo.png"
-        alt="Lerine Studio"
-        class="h-6 w-6"
-        width="96" height="96"
-        loading="lazy">
-  <span>Explore more at</span>
-  <a href="https://www.yourstorelink.com"
-     target="_blank" rel="noopener noreferrer"
-     class="text-blue-700 hover:text-blue-800 underline decoration-2 decoration-blue-500">
-     Lerine Studio
-  </a>
-</p>
-</div>
-
-    <!-- ===== User Guide Section (non-fixed footer, export-ignore) ===== -->
-  <footer class="export-ignore mx-auto max-w-4xl mt-8 mb-[7rem] md:mb-[9rem] px-4 text-xs text-gray-600 leading-relaxed">
-    <div class="rounded-xl border border-gray-200 p-4 bg-white/60">
-      <p class="font-semibold mb-2">Quick guide</p>
-      <ol class="list-decimal pl-5 space-y-1">
-        <li>Choose template & size.</li>
-        <li>Enter your text and adjust fonts.</li>
-        <li>Download. On iOS, long-press the preview to save, or take a screenshot, then print at a local store.</li>
-      </ol>
-      <hr class="my-3">
-      <div class="grid gap-2 sm:grid-cols-2">
-        <div>
-          <p class="font-semibold">Recommended paper</p>
-          <ul class="list-disc pl-5">
-            <li>24×36 in: 100–150 gsm poster paper</li>
-            <li>Foam board for rigid mounting</li>
-          </ul>
-        </div>
-        <div>
-          <p class="font-semibold">Placement tips</p>
-          <ul class="list-disc pl-5">
-            <li>Avoid strong backlight; keep text facing light.</li>
-            <li>Leave margins clear of stand clamps.</li>
-            <li>Outdoor? Consider lamination.</li>
-          </ul>
-        </div>
+        <div class="w-full text-xs md:text-sm text-slate-500">All editing and export run locally in your browser.</div>
       </div>
     </div>
   </footer>
+
+  <!-- 你的品牌区／帮助区保持不变，也可移除（导出时会自动忽略 export-ignore） -->
+
   <div id="printStage"></div>
 
   <script>
-  const DEFAULT_BG = {
-    '24x30': { small: 'assets/24-30-1.webp', large: 'assets/24-30-1.png' },
-    '24x50': { small: 'assets/24-50-1.webp', large: 'assets/24-50-1.png' }
-  };
-  const ASSET_LIBRARY = [
-    { id:'lib-2430-1', label:'24×30 – BG #1', size:'24x30',
-      small:'assets/24-30-1.webp', large:'assets/24-30-1.png', naturalW: 3600, naturalH: 4500 },
-    { id:'lib-2450-1', label:'24×50 – BG #1', size:'24x50',
-      small:'assets/24-50-1.webp', large:'assets/24-50-1.png', naturalW: 4800, naturalH: 10000 }
-  ];
-  const PAGE_SIZE = 12;
+/** ========= 数据与状态 ========= */
+const DEFAULT_BG = {
+  '24x30': { small: 'assets/24-30-1.webp', large: 'assets/24-30-1.png' },
+  '24x50': { small: 'assets/24-50-1.webp', large: 'assets/24-50-1.png' }
+};
+const ASSET_LIBRARY = [
+  { id:'lib-2430-1', label:'24×30 – BG #1', size:'24x30', small:'assets/24-30-1.webp', large:'assets/24-30-1.png', naturalW:3600, naturalH:4500 },
+  { id:'lib-2450-1', label:'24×50 – BG #1', size:'24x50', small:'assets/24-50-1.webp', large:'assets/24-50-1.png', naturalW:4800, naturalH:10000 }
+];
+const PAGE_SIZE = 12;
 
-  const state = {
-    size:'24x30',
-    dpi:300,
-    inches:{w:24, h:30},
-    preview:{ width:1920, height:2400, bgSmall:null, bgLarge:null, isLocal:false, naturalW:null, naturalH:null },
-    picks: { '24x30': null, '24x50': null },
-    pageIndex: { '24x30': 0, '24x50': 0 },
-    activeTextId:'t1',
-    inlineEditing:null
-  };
+const state = {
+  size:'24x30',
+  dpi:300,
+  inches:{w:24, h:30},
+  preview:{ width:1920, height:2400, bgSmall:null, bgLarge:null, isLocal:false, naturalW:null, naturalH:null },
+  picks: { '24x30': null, '24x50': null },
+  pageIndex: { '24x30': 0, '24x50': 0 },
+  activeTextId:'t1',
+  inlineEditing:null
+};
 
-  const previewStage = document.getElementById('previewStage');
-  const previewBgImg = document.getElementById('previewBgImg');
-  const printStage   = document.getElementById('printStage');
-  const guideH = document.getElementById('guideH');
-  const guideV = document.getElementById('guideV');
-  const trimGuide = document.getElementById('trimGuide');
-  const safeGuide = document.getElementById('safeGuide');
-  const bleedGuide= document.getElementById('bleedGuide');
+/** ========= DOM 缓存 ========= */
+const previewStage = document.getElementById('previewStage');
+const previewBgImg = document.getElementById('previewBgImg');
+const printStage   = document.getElementById('printStage');
+const guideH = document.getElementById('guideH');
+const guideV = document.getElementById('guideV');
+const trimGuide = document.getElementById('trimGuide');
+const safeGuide = document.getElementById('safeGuide');
+const bleedGuide= document.getElementById('bleedGuide');
 
-  const sizeSelect = document.getElementById('sizeSelect');
-  const dpiSelect  = document.getElementById('dpiSelect');
-  const guideSelect= document.getElementById('guideSelect');
-  const specInfo   = document.getElementById('specInfo');
-  const statusMsg  = document.getElementById('statusMsg');
+const sizeSelect = document.getElementById('sizeSelect');
+const dpiSelect  = document.getElementById('dpiSelect');
+const guideSelect= document.getElementById('guideSelect');
+const specInfo   = document.getElementById('specInfo');
+const statusMsg  = document.getElementById('statusMsg');
 
-  const bgUpload = document.getElementById('bgUpload');
-  const resetBg  = document.getElementById('resetBg');
-  const thumbGrid= document.getElementById('thumbGrid');
-  const pageInfo = document.getElementById('pageInfo');
-  const pageFirst= document.getElementById('pageFirst');
-  const pagePrev = document.getElementById('pagePrev');
-  const pageNext = document.getElementById('pageNext');
-  const pageLast = document.getElementById('pageLast');
+const bgUpload = document.getElementById('bgUpload');
+const resetBg  = document.getElementById('resetBg');
+const thumbGrid= document.getElementById('thumbGrid');
+const pageInfo = document.getElementById('pageInfo');
+const pageFirst= document.getElementById('pageFirst');
+const pagePrev = document.getElementById('pagePrev');
+const pageNext = document.getElementById('pageNext');
+const pageLast = document.getElementById('pageLast');
 
-  const showGuides = document.getElementById('showGuides');
-  const includeGuidesPdf = document.getElementById('includeGuidesPdf');
-  const safeIn = document.getElementById('safeIn');
-  const bleedIn= document.getElementById('bleedIn');
+const showGuides = document.getElementById('showGuides');
+const includeGuidesPdf = document.getElementById('includeGuidesPdf');
+const safeIn = document.getElementById('safeIn');
+const bleedIn= document.getElementById('bleedIn');
 
-  const btnWebPng = document.getElementById('btnWebPng');
-  const btnPrintPng = document.getElementById('btnPrintPng');
-  const btnPrintPdf = document.getElementById('btnPrintPdf');
+const btnWebPng = document.getElementById('btnWebPng');
+const btnPrintPng = document.getElementById('btnPrintPng');
+const btnPrintPdf = document.getElementById('btnPrintPdf');
 
-  const btnSave = document.getElementById('btnSave');
-  const btnLoad = document.getElementById('btnLoad');
-  const btnClear= document.getElementById('btnClear');
+const btnSave = document.getElementById('btnSave');
+const btnLoad = document.getElementById('btnLoad');
+const btnClear= document.getElementById('btnClear');
 
-  const t1=document.getElementById('t1');
-  const t2=document.getElementById('t2');
-  const t3=document.getElementById('t3');
-  const texts={t1,t2,t3};
+const t1=document.getElementById('t1');
+const t2=document.getElementById('t2');
+const t3=document.getElementById('t3');
+const texts={t1,t2,t3};
 
-  const iosNotice = document.getElementById('iosNotice');
-  const closeIosNotice = document.getElementById('closeIosNotice');
-        // === 尺寸切换事件绑定 ===
-sizeSelect.value = state.size; // 与当前状态同步
-sizeSelect.addEventListener('change', (e) => {
-  setSize(e.target.value);
-});
-    dpiSelect.addEventListener('change', (e)=> setDpi(e.target.value));
-    
-  const textContent    = document.getElementById('textContent');
-  const fontSize       = document.getElementById('fontSize');
-  const fontColor      = document.getElementById('fontColor');
-  const fontFamily     = document.getElementById('fontFamily');
-  const bold           = document.getElementById('bold');
-  const italic         = document.getElementById('italic');
-  const underline      = document.getElementById('underline');
-  const align          = document.getElementById('align');
-  const shadowStrength = document.getElementById('shadowStrength');
-  const shadowBlur     = document.getElementById('shadowBlur');
-  const shadowColor    = document.getElementById('shadowColor');
+const iosNotice = document.getElementById('iosNotice');
+const closeIosNotice = document.getElementById('closeIosNotice');
 
-  function status(msg){ statusMsg.textContent=msg; }
-  function isIOS(){ return /iP(hone|ad|od)/i.test(navigator.userAgent); }
-  function lockScroll(){ document.body.style.overflow='hidden'; }
-  function unlockScroll(){ document.body.style.overflow=''; }
-  function rgbToHex(rgb){ const m=rgb.match(/\d+/g); if(!m) return '#000000'; const [r,g,b]=m.map(Number); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
-  function rgbToStyleHex(c){
-  if(!c) return '#000000';
-  if (c.startsWith('#')) return c;
-  const tmp = document.createElement('div');
-  tmp.style.color = c;                   // 正确地设置行内样式
-  document.body.appendChild(tmp);        // 可选：挂到文档，提升兼容性
-  const computed = getComputedStyle(tmp).color;
-  tmp.remove();
-  return rgbToHex(computed);
-}
-  function getPoint(e){ if(e.touches&&e.touches[0]) return {x:e.touches[0].clientX,y:e.touches[0].clientY}; return {x:e.clientX,y:e.clientY};}
-  // === parsePercent helper ===
-  // 将 "50%" 转换为 50，非百分比返回 NaN，让调用方走回退逻辑
-  function parsePercent(v){
-    if (v == null) return NaN;
-    const s = String(v).trim();
-    if (s.endsWith('%')) {
-      const n = parseFloat(s.slice(0, -1));
-      return Number.isFinite(n) ? n : NaN;
-    }
-    return NaN;
-  }
+/** ========= 工具函数 ========= */
+const isIOS = ()=> /iP(hone|ad|od)/i.test(navigator.userAgent);
+const status = (s)=> statusMsg.textContent = s;
+const rgbToHex=(rgb)=>{ const m=rgb.match(/\d+/g); if(!m) return '#000000'; const [r,g,b]=m.map(Number); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); };
+function rgbToStyleHex(c){ if(!c) return '#000000'; if (c.startsWith('#')) return c; const tmp=document.createElement('div'); tmp.style.color=c; document.body.appendChild(tmp); const computed=getComputedStyle(tmp).color; tmp.remove(); return rgbToHex(computed); }
+function getPoint(e){ if(e.touches&&e.touches[0]) return {x:e.touches[0].clientX,y:e.touches[0].clientY}; return {x:e.clientX,y:e.clientY}; }
+function parsePercent(v){ if(v==null) return NaN; const s=String(v).trim(); if(s.endsWith('%')){ const n=parseFloat(s.slice(0,-1)); return Number.isFinite(n)?n:NaN; } return NaN; }
 
-  (function(){ if(isIOS()){ iosNotice.classList.remove('hidden'); closeIosNotice.addEventListener('click', ()=> iosNotice.classList.add('hidden')); } })();
-
-  function setSize(v){
-    state.picks[state.size] = {
-      small: state.preview.bgSmall, large: state.preview.bgLarge, isLocal: state.preview.isLocal,
-      naturalW: state.preview.naturalW, naturalH: state.preview.naturalH
-    };
-    state.size=v;
-if (v === '24x30') {
-  state.inches = { w:24, h:30 };
-  previewStage.style.aspectRatio = '4/5';
-} else {
-  state.inches = { w:24, h:50 };
-  previewStage.style.aspectRatio = (24 / 50); // 用数值更稳
-}
-
-    if(isIOS() && v==='24x50'){ dpiSelect.value='200'; setDpi(200); status('On iPhone: 200 DPI set for stability.'); }
-
-    const pick = state.picks[v];
-    if (pick && pick.small && pick.large){
-      Object.assign(state.preview, { bgSmall:pick.small, bgLarge:pick.large, isLocal:!!pick.isLocal, naturalW:pick.naturalW||null, naturalH:pick.naturalH||null });
-    } else {
-      Object.assign(state.preview, { bgSmall: DEFAULT_BG[v].small, bgLarge: DEFAULT_BG[v].large, isLocal:false, naturalW:null, naturalH:null });
-    }
-    applyPreviewBg();
-    updateSpecInfo();
-    buildThumbs();
-    clampPositionsToStage();
-    layoutGuides();
-  }
-  function setDpi(v){ state.dpi=parseInt(v,10); updateSpecInfo(); }
-  function updateSpecInfo(){
-    const {w,h}=state.inches;
-    const printWpx=Math.round(w*state.dpi), printHpx=Math.round(h*state.dpi);
-    specInfo.innerHTML = `<b>Spec:</b> Print ${w}×${h} in @ ${state.dpi} dpi → <b>${printWpx}×${printHpx} px</b>`;
-  }
-
-  function applyPreviewBg(){
-    previewBgImg.crossOrigin = 'anonymous';
-    previewBgImg.src = state.preview.bgSmall || DEFAULT_BG[state.size].small;
-    previewBgImg.onload = ()=>{
-      if(!state.preview.naturalW || !state.preview.naturalH){
-        state.preview.naturalW = previewBgImg.naturalWidth;
-        state.preview.naturalH = previewBgImg.naturalHeight;
-      }
-    };
-  }
-
-  function getAllItemsForSize(size){ return ASSET_LIBRARY.filter(i=>i.size===size); }
-  function buildThumbs(){
-    thumbGrid.innerHTML='';
-    const size = state.size;
-    const all = getAllItemsForSize(size);
-    const total = all.length || 1;
-    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    const page = Math.min(Math.max(0, state.pageIndex[size] || 0), totalPages - 1);
-    state.pageIndex[size] = page;
-
-    const start = page * PAGE_SIZE, end = Math.min(total, start + PAGE_SIZE);
-    const pageItems = all.slice(start, end);
-
-    pageItems.forEach(item=>{
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='relative border-2 border-transparent rounded-lg overflow-hidden bg-slate-200 aspect-[3/2]';
-      btn.title = item.label || 'Background';
-      btn.dataset.small = item.small;
-      btn.dataset.large = item.large || item.small;
-      btn.dataset.nw = item.naturalW||'';
-      btn.dataset.nh = item.naturalH||'';
-      btn.innerHTML = `<img alt="${item.label||'bg'}" loading="lazy" class="w-full h-full object-cover" src="${item.small}">`;
-      btn.addEventListener('click',()=>{
-        state.preview.isLocal=false;
-        state.preview.bgSmall=item.small;
-        state.preview.bgLarge=item.large||item.small;
-        state.preview.naturalW=parseInt(btn.dataset.nw||'0',10)||null;
-        state.preview.naturalH=parseInt(btn.dataset.nh||'0',10)||null;
-        applyPreviewBg();
-        status('Background set from library.');
-      });
-      thumbGrid.appendChild(btn);
-    });
-
-    pageInfo.textContent = `Page ${page+1} / ${totalPages}`;
-    pageFirst.disabled = (page === 0);
-    pagePrev.disabled  = (page === 0);
-    pageNext.disabled  = (page >= totalPages-1);
-    pageLast.disabled  = (page >= totalPages-1);
-  }
-  pageFirst.addEventListener('click', ()=>{ state.pageIndex[state.size]=0; buildThumbs(); });
-  pagePrev .addEventListener('click', ()=>{ state.pageIndex[state.size]=Math.max(0,(state.pageIndex[state.size]||0)-1); buildThumbs(); });
-  pageNext .addEventListener('click', ()=>{
-    const all = getAllItemsForSize(state.size);
-    const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
-    state.pageIndex[state.size]=Math.min(totalPages-1,(state.pageIndex[state.size]||0)+1); buildThumbs();
+/** ========= 初始化 ========= */
+(function(){
+  if(isIOS()){ iosNotice.classList.remove('hidden'); closeIosNotice.addEventListener('click', ()=> iosNotice.classList.add('hidden')); }
+  sizeSelect.value = state.size;
+  sizeSelect.addEventListener('change', (e)=> setSize(e.target.value));
+  dpiSelect.addEventListener('change', (e)=> setDpi(e.target.value));
+  guideSelect.addEventListener('change', ()=> {
+    const on = guideSelect.value === 'on';
+    guideH.classList.toggle('hidden', !on);
+    guideV.classList.toggle('hidden', !on);
   });
-  pageLast .addEventListener('click', ()=>{
-    const all = getAllItemsForSize(state.size);
-    const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
-    state.pageIndex[state.size]=totalPages-1; buildThumbs();
-  });
+})();
 
-  bgUpload.addEventListener('change', async(e)=>{
-    const file = (e.target && e.target.files && e.target.files[0]) || null;
-if (!file) return;
-    const dataUrl=await new Promise((resolve,reject)=>{ const fr=new FileReader(); fr.onload=()=>resolve(fr.result); fr.onerror=reject; fr.readAsDataURL(file); });
-    const img=new Image();
-    img.onload=()=>{
-      state.preview.isLocal=true;
-      state.preview.bgSmall=dataUrl;
-      state.preview.bgLarge=dataUrl;
-      state.preview.naturalW=img.naturalWidth;
-      state.preview.naturalH=img.naturalHeight;
+/** ========= 尺寸/预览 ========= */
+function setSize(v){
+  state.picks[state.size] = {
+    small: state.preview.bgSmall, large: state.preview.bgLarge, isLocal: state.preview.isLocal,
+    naturalW: state.preview.naturalW, naturalH: state.preview.naturalH
+  };
+  state.size=v;
+  if (v==='24x30'){ state.inches={w:24,h:30}; previewStage.style.aspectRatio='4/5'; }
+  else { state.inches={w:24,h:50}; previewStage.style.aspectRatio=(24/50); }
+
+  // iOS + 长图：自动降到 200 dpi（更稳）
+  if(isIOS() && v==='24x50'){ dpiSelect.value='200'; setDpi(200); status('On iPhone: 200 DPI set for stability.'); }
+
+  const pick = state.picks[v];
+  if (pick && pick.small && pick.large){
+    Object.assign(state.preview, { bgSmall:pick.small, bgLarge:pick.large, isLocal:!!pick.isLocal, naturalW:pick.naturalW||null, naturalH:pick.naturalH||null });
+  } else {
+    Object.assign(state.preview, { bgSmall: DEFAULT_BG[v].small, bgLarge: DEFAULT_BG[v].large, isLocal:false, naturalW:null, naturalH:null });
+  }
+  applyPreviewBg();
+  updateSpecInfo();
+  buildThumbs();
+  clampPositionsToStage();
+  layoutGuides();
+}
+function setDpi(v){ state.dpi=parseInt(v,10); updateSpecInfo(); }
+function updateSpecInfo(){
+  const {w,h}=state.inches;
+  const W=Math.round(w*state.dpi), H=Math.round(h*state.dpi);
+  specInfo.innerHTML = `<b>Spec:</b> Print ${w}×${h} in @ ${state.dpi} dpi → <b>${W}×${H} px</b>`;
+}
+function applyPreviewBg(){
+  previewBgImg.crossOrigin='anonymous';
+  previewBgImg.src = state.preview.bgSmall || DEFAULT_BG[state.size].small;
+  previewBgImg.onload = ()=>{
+    if(!state.preview.naturalW || !state.preview.naturalH){
+      state.preview.naturalW = previewBgImg.naturalWidth;
+      state.preview.naturalH = previewBgImg.naturalHeight;
+    }
+  };
+}
+
+/** ========= 素材库分页 ========= */
+function getAllItemsForSize(size){ return ASSET_LIBRARY.filter(i=>i.size===size); }
+function buildThumbs(){
+  thumbGrid.innerHTML='';
+  const size = state.size;
+  const all = getAllItemsForSize(size);
+  const total = all.length || 1;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(Math.max(0, state.pageIndex[size] || 0), totalPages - 1);
+  state.pageIndex[size] = page;
+
+  const start = page * PAGE_SIZE, end = Math.min(total, start + PAGE_SIZE);
+  const pageItems = all.slice(start, end);
+
+  pageItems.forEach(item=>{
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='relative border-2 border-transparent rounded-lg overflow-hidden bg-slate-200 aspect-[3/2]';
+    btn.title=item.label || 'Background';
+    btn.dataset.small=item.small;
+    btn.dataset.large=item.large || item.small;
+    btn.dataset.nw=item.naturalW||'';
+    btn.dataset.nh=item.naturalH||'';
+    btn.innerHTML = `<img alt="${item.label||'bg'}" loading="lazy" class="w-full h-full object-cover" src="${item.small}">`;
+    btn.addEventListener('click',()=>{
+      state.preview.isLocal=false;
+      state.preview.bgSmall=item.small;
+      state.preview.bgLarge=item.large||item.small;
+      state.preview.naturalW=parseInt(btn.dataset.nw||'0',10)||null;
+      state.preview.naturalH=parseInt(btn.dataset.nh||'0',10)||null;
       applyPreviewBg();
-      status(`Local background loaded: ${img.naturalWidth}×${img.naturalHeight}`);
-      e.target.value='';
-    };
-    img.src=dataUrl;
+      status('Background set from library.');
+    }, {passive:true});
+    thumbGrid.appendChild(btn);
   });
-  resetBg.addEventListener('click', ()=>{
-    const v = state.size;
-    Object.assign(state.preview, { isLocal:false, bgSmall:DEFAULT_BG[v].small, bgLarge:DEFAULT_BG[v].large, naturalW:null, naturalH:null });
+
+  pageInfo.textContent = `Page ${page+1} / ${totalPages}`;
+  pageFirst.disabled = (page === 0);
+  pagePrev.disabled  = (page === 0);
+  pageNext.disabled  = (page >= totalPages-1);
+  pageLast.disabled  = (page >= totalPages-1);
+}
+pageFirst.addEventListener('click', ()=>{ state.pageIndex[state.size]=0; buildThumbs(); }, {passive:true});
+pagePrev .addEventListener('click', ()=>{ state.pageIndex[state.size]=Math.max(0,(state.pageIndex[state.size]||0)-1); buildThumbs(); }, {passive:true});
+pageNext .addEventListener('click', ()=>{ const all=getAllItemsForSize(state.size); const totalPages=Math.max(1, Math.ceil(all.length / PAGE_SIZE)); state.pageIndex[state.size]=Math.min(totalPages-1,(state.pageIndex[state.size]||0)+1); buildThumbs(); }, {passive:true});
+pageLast .addEventListener('click', ()=>{ const all=getAllItemsForSize(state.size); const totalPages=Math.max(1, Math.ceil(all.length / PAGE_SIZE)); state.pageIndex[state.size]=totalPages-1; buildThumbs(); }, {passive:true});
+
+/** ========= 本地上传 ========= */
+bgUpload.addEventListener('change', async(e)=>{
+  const file = (e.target && e.target.files && e.target.files[0]) || null;
+  if (!file) return;
+  const dataUrl=await new Promise((resolve,reject)=>{ const fr=new FileReader(); fr.onload=()=>resolve(fr.result); fr.onerror=reject; fr.readAsDataURL(file); });
+  const img=new Image();
+  img.onload=()=>{
+    state.preview.isLocal=true;
+    state.preview.bgSmall=dataUrl;
+    state.preview.bgLarge=dataUrl;
+    state.preview.naturalW=img.naturalWidth;
+    state.preview.naturalH=img.naturalHeight;
     applyPreviewBg();
-    status('Background reset to default.');
-  });
-
-  let currentLayoutName = 'centered';  
-  const layoutTemplates = {
-    centered: [
-      { id:'t1', left:'50%', top:'20%', align:'center' },
-      { id:'t2', left:'50%', top:'35%', align:'center' },
-      { id:'t3', left:'50%', top:'50%', align:'center' },
-    ],
-    topLeft: [
-      { id:'t1', left:'10%', top:'10%', align:'left' },
-      { id:'t2', left:'10%', top:'25%', align:'left' },
-      { id:'t3', left:'10%', top:'40%', align:'left' },
-    ],
-    bottomRight: [
-      { id:'t1', left:'60%', top:'65%', align:'right' },
-      { id:'t2', left:'60%', top:'75%', align:'right' },
-      { id:'t3', left:'60%', top:'85%', align:'right' },
-    ]
+    status(`Local background: ${img.naturalWidth}×${img.naturalHeight}`);
+    e.target.value='';
   };
+  img.src=dataUrl;
+}, {passive:true});
+document.getElementById('resetBg').addEventListener('click', ()=>{
+  const v=state.size;
+  Object.assign(state.preview, { isLocal:false, bgSmall:DEFAULT_BG[v].small, bgLarge:DEFAULT_BG[v].large, naturalW:null, naturalH:null });
+  applyPreviewBg();
+  status('Background reset to default.');
+}, {passive:true});
+
+/** ========= 布局模板 ========= */
+let currentLayoutName='centered';
+const layoutTemplates = {
+  centered: [
+    { id:'t1', left:'50%', top:'20%', align:'center' },
+    { id:'t2', left:'50%', top:'35%', align:'center' },
+    { id:'t3', left:'50%', top:'50%', align:'center' },
+  ],
+  topLeft: [
+    { id:'t1', left:'10%', top:'10%', align:'left' },
+    { id:'t2', left:'10%', top:'25%', align:'left' },
+    { id:'t3', left:'10%', top:'40%', align:'left' },
+  ],
+  bottomRight: [
+    { id:'t1', left:'60%', top:'65%', align:'right' },
+    { id:'t2', left:'60%', top:'75%', align:'right' },
+    { id:'t3', left:'60%', top:'85%', align:'right' },
+  ]
+};
 function applyLayout(name){
-  const tpl = layoutTemplates[name];
-  if(!tpl) return;
-
-  currentLayoutName = name;
-
+  const tpl=layoutTemplates[name]; if(!tpl) return;
+  currentLayoutName=name;
   const isMobileNarrow = previewStage.clientWidth <= 480;
   const BR_WIDTH_PCT = isMobileNarrow ? 82 : 40;
   const BR_MARGIN_RIGHT_PCT = isMobileNarrow ? 6 : 4;
   const stageRect = previewStage.getBoundingClientRect();
 
   tpl.forEach(t=>{
-    const el = document.getElementById(t.id);
-    if (!el) return;
+    const el=document.getElementById(t.id); if(!el) return;
+    // 清理上次残留
+    el.style.width = ''; el.style.maxWidth=''; el.style.transform='none'; el.style.textAlign='';
+    el.style.whiteSpace='pre-wrap'; el.style.wordBreak='break-word'; el.style.overflowWrap='anywhere';
 
-    // ① 清理前一个布局残留样式
-    el.style.width = '';
-    el.style.maxWidth = '';
-    el.style.transform = 'none';
-    el.style.textAlign = '';
-    el.style.whiteSpace = 'pre-wrap';
-    el.style.wordBreak = 'break-word';
-    el.style.overflowWrap = 'anywhere';
+    el.style.left=t.left; el.style.top=t.top; el.style.textAlign=t.align;
+    const leftP = String(t.left).trim().endsWith('%') ? parseFloat(t.left) : (parseFloat(t.left)/stageRect.width)*100;
+    const topP  = String(t.top ).trim().endsWith('%') ? parseFloat(t.top ) : (parseFloat(t.top )/stageRect.height)*100;
 
-    // ② 设置本次基础位置与对齐
-    el.style.left = t.left;
-    el.style.top  = t.top;
-    el.style.textAlign = t.align;
-
-    const leftP = (String(t.left).trim().endsWith('%'))
-      ? parseFloat(t.left)
-      : (parseFloat(t.left) / stageRect.width) * 100;
-    const topP = (String(t.top).trim().endsWith('%'))
-      ? parseFloat(t.top)
-      : (parseFloat(t.top) / stageRect.height) * 100;
-
-    // ③ 不同模板样式
-    if (name === 'centered') {
-      el.style.left = '50%';
-      el.style.transform = 'translateX(-50%)';
-      el.style.textAlign = 'center';
-      el.dataset.leftPercent = '50.000000';
-      el.dataset.topPercent = isFinite(topP) ? topP.toFixed(6) : el.dataset.topPercent;
-    } else if (name === 'topLeft') {
-      el.style.transform = 'none';
-      el.dataset.leftPercent = isFinite(leftP) ? leftP.toFixed(6) : el.dataset.leftPercent;
-      el.dataset.topPercent  = isFinite(topP)  ? topP.toFixed(6)  : el.dataset.topPercent;
-    } else if (name === 'bottomRight') {
+    if (name==='centered'){
+      el.style.left='50%'; el.style.transform='translateX(-50%)'; el.style.textAlign='center';
+      el.dataset.leftPercent='50.000000'; el.dataset.topPercent = isFinite(topP)? topP.toFixed(6):el.dataset.topPercent;
+    } else if (name==='topLeft'){
+      el.style.transform='none';
+      el.dataset.leftPercent=isFinite(leftP)? leftP.toFixed(6):el.dataset.leftPercent;
+      el.dataset.topPercent =isFinite(topP) ? topP.toFixed(6) :el.dataset.topPercent;
+    } else if (name==='bottomRight'){
       const leftPercent = 100 - BR_MARGIN_RIGHT_PCT - BR_WIDTH_PCT;
-      el.style.left      = leftPercent + '%';
-      el.style.transform = 'none';
-      el.style.textAlign = 'right';
-      el.style.maxWidth  = BR_WIDTH_PCT + '%';
-      el.style.width     = BR_WIDTH_PCT + '%';
-      el.dataset.leftPercent = leftPercent.toFixed(6);
-      el.dataset.topPercent  = isFinite(topP) ? topP.toFixed(6) : el.dataset.topPercent;
+      el.style.left=leftPercent+'%'; el.style.transform='none'; el.style.textAlign='right';
+      el.style.maxWidth=BR_WIDTH_PCT+'%'; el.style.width=BR_WIDTH_PCT+'%';
+      el.dataset.leftPercent=leftPercent.toFixed(6);
+      el.dataset.topPercent =isFinite(topP)? topP.toFixed(6):el.dataset.topPercent;
     }
   });
-
   clampPositionsToStage();
-  status('Applied layout: ' + name);
+  status('Applied layout: '+name);
 }
 
-  function setActiveText(id){
-    state.activeTextId = id;
-    for (const el of Object.values(texts)) el.classList.remove('active');
-    texts[id]?.classList.add('active');
-    loadTextEditorFrom(id);
-  }
-  function loadTextEditorFrom(id){
-    const el=texts[id]; if(!el) return;
-    for (const n of Object.values(texts)) n.classList.remove('active');
-    el.classList.add('active');
-    textContent.value=el.innerText;
-    const cs=getComputedStyle(el);
-    fontSize.value=parseInt(cs.fontSize,10)||36;
-    fontColor.value=rgbToStyleHex(cs.color);
-    const fam=cs.fontFamily;
-    const opts=Array.from(fontFamily.options);
-    const found=opts.find(o=>fam.toLowerCase().includes(o.value.split(',')[0].replace(/["']/g,'').toLowerCase()));
-    if(found) fontFamily.value=found.value;
-    bold.checked=cs.fontWeight==='700'||parseInt(cs.fontWeight,10)>=600;
-    italic.checked=cs.fontStyle==='italic';
-    underline.checked=(cs.textDecorationLine||'').includes('underline');
-    align.value=cs.textAlign||'left';
-    const dsS = parseInt(el.dataset.shadowS||'',10);
-    const dsB = parseFloat(el.dataset.shadowBlur||'');
-    if(!Number.isNaN(dsS)) shadowStrength.value = dsS;
-    if(!Number.isNaN(dsB)) shadowBlur.value = dsB;
-    shadowColor.value = el.dataset.shadowColor || '#000000';
-  }
-    // 侧栏 Text1/2/3 按钮切换激活元素（放在 loadTextEditorFrom 之后）
-document.querySelectorAll('.pickTarget').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const id = btn.dataset.target; // 't1' | 't2' | 't3'
-    setActiveText(id);
-  });
-});
-  function applyEditorTo(id){
-    const el=texts[id]; if(!el) return;
-    el.innerText=textContent.value;
-    const wantedPx = parseInt(fontSize.value,10) || 36;
-    // 取消上限：直接使用用户想要的字号
-    el.style.fontSize = `${wantedPx}px`;
-    el.style.lineHeight = '1.25';
+/** ========= 文字编辑 ========= */
+const textContent    = document.getElementById('textContent');
+const fontSize       = document.getElementById('fontSize');
+const fontColor      = document.getElementById('fontColor');
+const fontFamily     = document.getElementById('fontFamily');
+const bold           = document.getElementById('bold');
+const italic         = document.getElementById('italic');
+const underline      = document.getElementById('underline');
+const align          = document.getElementById('align');
+const shadowStrength = document.getElementById('shadowStrength');
+const shadowBlur     = document.getElementById('shadowBlur');
+const shadowColor    = document.getElementById('shadowColor');
 
-    // 允许大标题自动换行
-    const isMobileNarrow = previewStage.clientWidth <= 480;
-    const capPct = isMobileNarrow ? 96 : 92;     // 容器最大宽度百分比（可按需调整）
-    el.style.maxWidth = capPct + '%';
-    el.style.whiteSpace = 'pre-wrap';
-    el.style.wordBreak = 'break-word';
-    el.style.overflowWrap = 'anywhere';
-    el.style.color=fontColor.value;
-    el.style.fontWeight=bold.checked?'700':'400';
-    el.style.fontStyle=italic.checked?'italic':'normal';
-    el.style.textDecoration=underline.checked?'underline':'none';
-    el.style.textAlign=align.value;
-    el.style.fontFamily=fontFamily.value;
-    // Enforce 400 for families that only have 400 to avoid fake bold / fallback illusion
-(function enforceWeightFor400() {
-  try {
-    const famName = (fontFamily.value.split(',')[0] || '').replace(/['"]/g,'').trim();
-    const only400 = new Set([
-      'Baloo2','Bangers','Chewy','Creepster','DM Serif Display',
-      'Manrope','Noto Sans Display','Playfair Display','Pacifico',
-      'Dancing Script','Great Vibes'
-    ]);
-    if (only400.has(famName)) { el.style.fontWeight = '400'; }
-  } catch(_) {}
-})();
-    
-    const s=parseInt(shadowStrength.value,10)||0;
-    const bl=parseInt(shadowBlur.value,10)||0;
-    const off=Math.round(s/10)||0;
-    el.style.textShadow = s===0 ? 'none' : `${off}px ${off}px ${bl}px ${shadowColor.value}`;
-    el.dataset.shadowS=String(s);
-    el.dataset.shadowBlur=String(bl);
-    el.dataset.shadowColor=shadowColor.value;
-  }
-    // === Debounce editor updates into next animation frame ===
-let _rafToken = null;
-function applyEditorToDebounced(id) {
-  if (_rafToken) return;
-  _rafToken = requestAnimationFrame(() => {
-    _rafToken = null;
-    applyEditorTo(id);
-    clampPositionsToStage();
-  });
+function setActiveText(id){
+  state.activeTextId=id;
+  for (const el of Object.values(texts)) el.classList.remove('active');
+  texts[id]?.classList.add('active');
+  loadTextEditorFrom(id);
 }
-  textContent.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
-  fontSize.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
-  fontColor.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
-  bold.addEventListener('change', ()=>applyEditorToDebounced(state.activeTextId));
-  italic.addEventListener('change', ()=>applyEditorToDebounced(state.activeTextId));
-  underline.addEventListener('change', ()=>applyEditorToDebounced(state.activeTextId));
-  fontFamily.addEventListener('change', ()=>{
-  // 1) 立即合帧应用（不卡 UI）
+function loadTextEditorFrom(id){
+  const el=texts[id]; if(!el) return;
+  for (const n of Object.values(texts)) n.classList.remove('active');
+  el.classList.add('active');
+  textContent.value=el.innerText;
+  const cs=getComputedStyle(el);
+  fontSize.value=parseInt(cs.fontSize,10)||36;
+  fontColor.value=rgbToStyleHex(cs.color);
+  const fam=cs.fontFamily;
+  const opts=Array.from(fontFamily.options);
+  const found=opts.find(o=>fam.toLowerCase().includes(o.value.split(',')[0].replace(/["']/g,'').toLowerCase()));
+  if(found) fontFamily.value=found.value;
+  bold.checked=cs.fontWeight==='700'||parseInt(cs.fontWeight,10)>=600;
+  italic.checked=cs.fontStyle==='italic';
+  underline.checked=(cs.textDecorationLine||'').includes('underline');
+  align.value=cs.textAlign||'left';
+  const dsS=parseInt(el.dataset.shadowS||'',10), dsB=parseFloat(el.dataset.shadowBlur||'');
+  if(!Number.isNaN(dsS)) shadowStrength.value=dsS;
+  if(!Number.isNaN(dsB)) shadowBlur.value=dsB;
+  shadowColor.value=el.dataset.shadowColor || '#000000';
+}
+document.querySelectorAll('.pickTarget').forEach(btn=>btn.addEventListener('click', ()=> setActiveText(btn.dataset.target), {passive:true}));
+
+function applyEditorTo(id){
+  const el=texts[id]; if(!el) return;
+  el.innerText=textContent.value;
+  const wantedPx = parseInt(fontSize.value,10) || 36;
+  el.style.fontSize = `${wantedPx}px`;
+  el.style.lineHeight = '1.25';
+  const isMobileNarrow = previewStage.clientWidth <= 480;
+  const capPct = isMobileNarrow ? 96 : 92;
+  el.style.maxWidth = capPct + '%';
+  el.style.whiteSpace='pre-wrap'; el.style.wordBreak='break-word'; el.style.overflowWrap='anywhere';
+  el.style.color=fontColor.value;
+  el.style.fontWeight=bold.checked?'700':'400';
+  el.style.fontStyle=italic.checked?'italic':'normal';
+  el.style.textDecoration=underline.checked?'underline':'none';
+  el.style.textAlign=align.value;
+  el.style.fontFamily=fontFamily.value;
+  (function enforceWeightFor400(){
+    try{
+      const famName=(fontFamily.value.split(',')[0]||'').replace(/['"]/g,'').trim();
+      const only400=new Set(['Baloo2','Bangers','Chewy','Creepster','DM Serif Display','Manrope','Noto Sans Display','Playfair Display','Pacifico','Dancing Script','Great Vibes']);
+      if(only400.has(famName)){ el.style.fontWeight='400'; }
+    }catch(_){}
+  })();
+  const s=parseInt(shadowStrength.value,10)||0;
+  const bl=parseInt(shadowBlur.value,10)||0;
+  const off=Math.round(s/10)||0;
+  el.style.textShadow = s===0?'none':`${off}px ${off}px ${bl}px ${shadowColor.value}`;
+  el.dataset.shadowS=String(s); el.dataset.shadowBlur=String(bl); el.dataset.shadowColor=shadowColor.value;
+}
+let _rafToken=null;
+function applyEditorToDebounced(id){ if(_rafToken) return; _rafToken=requestAnimationFrame(()=>{ _rafToken=null; applyEditorTo(id); clampPositionsToStage(); }); }
+
+textContent.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
+fontSize.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
+fontColor.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
+bold.addEventListener('change', ()=>applyEditorToDebounced(state.activeTextId));
+italic.addEventListener('change', ()=>applyEditorToDebounced(state.activeTextId));
+underline.addEventListener('change', ()=>applyEditorToDebounced(state.activeTextId));
+fontFamily.addEventListener('change', ()=>{
   applyEditorToDebounced(state.activeTextId);
-
-  // 2) 若字体尚未加载，则在后台加载；加载完成后再补一次渲染
-  try {
-    const famName = (fontFamily.value.split(',')[0] || '').replace(/['"]/g,'').trim();
-    if (document.fonts && !document.fonts.check(`400 16px ${famName}`)) {
-      document.fonts.load(`400 16px ${famName}`)
-        .then(()=>applyEditorToDebounced(state.activeTextId))
-        .catch(()=>{ /* 忽略加载失败，保留系统回退字体 */ });
+  try{
+    const famName=(fontFamily.value.split(',')[0]||'').replace(/['"]/g,'').trim();
+    if(document.fonts && !document.fonts.check(`400 16px ${famName}`)){
+      document.fonts.load(`400 16px ${famName}`).then(()=>applyEditorToDebounced(state.activeTextId)).catch(()=>{});
     }
-  } catch(_) {}
+  }catch(_){}
 });
-
-// Patch 1: align=center also centers the box
 align.addEventListener('change', ()=>{
   applyEditorToDebounced(state.activeTextId);
-
-  const el = texts[state.activeTextId];
-  if (!el) return;
-
-  if (align.value === 'center') {
-    // —— 当用户选中居中对齐时 ——  
-    el.style.left = '50%';
-    el.style.transform = 'translateX(-50%)';
-    el.dataset.leftPercent = '50.000000';  // 同步 leftPercent 数据状态
-  } else {
-    // —— 当切换回 left/right 时，去掉居中位移 ——  
-    el.style.transform = 'none';
-  }
-
-  // 保持文本在舞台范围内
+  const el=texts[state.activeTextId]; if(!el) return;
+  if (align.value==='center'){ el.style.left='50%'; el.style.transform='translateX(-50%)'; el.dataset.leftPercent='50.000000'; }
+  else { el.style.transform='none'; }
   normalizePercentPosition(el, previewStage);
 });
 
-// === Center Guides toggle ===
-guideSelect.addEventListener('change', () => {
-  const on = guideSelect.value === 'on';
-  guideH.classList.toggle('hidden', !on);
-  guideV.classList.toggle('hidden', !on);
-});
-    
-  shadowStrength.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
-  shadowBlur.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
-  shadowColor.addEventListener('input', ()=>applyEditorToDebounced(state.activeTextId));
+/** ========= 拖拽（桌面+触屏） ========= */
+for(const el of Object.values(texts)) makeDraggable(el,previewStage);
+function makeDraggable(el,boundary){
+  normalizePercentPosition(el,boundary);
+  let isDown=false, startX=0,startY=0, startLeftPx=0, startTopPx=0;
+  let hadCenterTransform=false;
 
-  for(const el of Object.values(texts)) makeDraggable(el,previewStage);
-  function makeDraggable(el,boundary){
-    normalizePercentPosition(el,boundary);
-    let isDown=false, startX=0,startY=0, startLeftPx=0, startTopPx=0;
-    let hadCenterTransform = false;
-
-    const down=e=>{
-      if (el.classList.contains('editing')) return;
-      isDown=true; const p=getPoint(e); startX=p.x; startY=p.y;
-
-      // Patch 2: temporarily remove translateX(-50%) to avoid boundary miscalc
-      hadCenterTransform = (el.style.transform || '').includes('translateX(-50%)');
-      if (hadCenterTransform) {
-        const b = boundary.getBoundingClientRect();
-        const r = el.getBoundingClientRect();
-        const leftPxReal = r.left - b.left;
-        const leftPercentReal = (leftPxReal / b.width) * 100;
-        el.style.transform = 'none';
-        el.style.left = `${leftPercentReal}%`;
-        el.dataset.leftPercent = leftPercentReal.toFixed(6);
-      }
-
-      const b=boundary.getBoundingClientRect(); const leftTop = getInlineLeftTop(el, b);
-      startLeftPx = leftTop.leftPercent * b.width / 100;
-      startTopPx  = leftTop.topPercent  * b.height/ 100;
-      e.preventDefault(); setActiveText(el.id);
-    };
-    const move=e=>{
-      if(!isDown || el.classList.contains('editing')) return;
-      const p=getPoint(e); const dx=p.x-startX, dy=p.y-startY;
+  const down=e=>{
+    if(el.classList.contains('editing')) return;
+    isDown=true; const p=getPoint(e); startX=p.x; startY=p.y;
+    hadCenterTransform=(el.style.transform||'').includes('translateX(-50%)');
+    if(hadCenterTransform){
       const b=boundary.getBoundingClientRect(); const r=el.getBoundingClientRect();
-      let leftPx = startLeftPx + dx; let topPx = startTopPx + dy;
-      leftPx=Math.max(0,Math.min(leftPx,b.width -r.width));
-      topPx =Math.max(0,Math.min(topPx ,b.height-r.height));
-      const leftPercent = (leftPx / b.width) * 100;
-      const topPercent  = (topPx  / b.height)* 100;
-      el.style.left = `${leftPercent}%`; el.style.top = `${topPercent}%`;
-      el.dataset.leftPercent = leftPercent.toFixed(6);
-      el.dataset.topPercent  = topPercent.toFixed(6);
-    };
-    const up=()=>{
-      if(!isDown) return;
-      isDown=false;
-      const stillCenterText = (getComputedStyle(el).textAlign === 'center');
-      if (hadCenterTransform && stillCenterText) {
-        el.style.transform = 'translateX(-50%)';
-        el.style.left = '50%';
-        el.dataset.leftPercent = '50.000000';
-      }
-      clampPositionsToStage();
-    };
-    el.addEventListener('mousedown',down);
-    window.addEventListener('mousemove',move);
-    window.addEventListener('mouseup',up);
-    el.addEventListener('touchstart',down,{passive:false});
-    window.addEventListener('touchmove',move,{passive:false});
-    window.addEventListener('touchend',up);
-  }
-  function normalizePercentPosition(el, boundary){
-    const b=boundary.getBoundingClientRect();
-    let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
-    if(Number.isNaN(lp) || Number.isNaN(tp)){
-      const r=el.getBoundingClientRect();
-      lp = ((r.left - b.left)/b.width) * 100;
-      tp = ((r.top  - b.top )/b.height)* 100;
+      const leftPxReal = r.left - b.left;
+      const leftPercentReal = (leftPxReal / b.width) * 100;
+      el.style.transform='none';
+      el.style.left=`${leftPercentReal}%`;
+      el.dataset.leftPercent=leftPercentReal.toFixed(6);
     }
-    el.style.left = `${lp}%`; el.style.top = `${tp}%`;
-    el.dataset.leftPercent = lp.toFixed(6); el.dataset.topPercent = tp.toFixed(6);
+    const b=boundary.getBoundingClientRect(); const leftTop=getInlineLeftTop(el,b);
+    startLeftPx = leftTop.leftPercent * b.width / 100;
+    startTopPx  = leftTop.topPercent  * b.height/ 100;
+    setActiveText(el.id);
+    e.preventDefault();
+  };
+  const move=e=>{
+    if(!isDown || el.classList.contains('editing')) return;
+    const p=getPoint(e); const dx=p.x-startX, dy=p.y-startY;
+    const b=boundary.getBoundingClientRect(); const r=el.getBoundingClientRect();
+    let leftPx=startLeftPx+dx, topPx=startTopPx+dy;
+    leftPx=Math.max(0,Math.min(leftPx,b.width -r.width));
+    topPx =Math.max(0,Math.min(topPx ,b.height-r.height));
+    const leftPercent=(leftPx/b.width)*100, topPercent=(topPx/b.height)*100;
+    el.style.left=`${leftPercent}%`; el.style.top=`${topPercent}%`;
+    el.dataset.leftPercent=leftPercent.toFixed(6); el.dataset.topPercent=topPercent.toFixed(6);
+  };
+  const up=()=>{
+    if(!isDown) return; isDown=false;
+    const stillCenter = (getComputedStyle(el).textAlign==='center');
+    if(hadCenterTransform && stillCenter){ el.style.transform='translateX(-50%)'; el.style.left='50%'; el.dataset.leftPercent='50.000000'; }
+    clampPositionsToStage();
+  };
+  el.addEventListener('mousedown',down);
+  window.addEventListener('mousemove',move, {passive:false});
+  window.addEventListener('mouseup',up, {passive:true});
+  el.addEventListener('touchstart',down,{passive:false});
+  window.addEventListener('touchmove',move,{passive:false});
+  window.addEventListener('touchend',up,{passive:true});
+
+  // 长按进入内联编辑（移动端）
+  let pressTimer=null;
+  const enterEdit=()=>{ if(el.classList.contains('editing')) return; el.classList.add('editing'); el.contentEditable='true'; el.focus(); };
+  const exitEdit =()=>{ if(!el.classList.contains('editing')) return; el.classList.remove('editing'); el.contentEditable='false'; loadTextEditorFrom(el.id); normalizePercentPosition(el, boundary); };
+  el.addEventListener('dblclick', (e)=>{ e.preventDefault(); enterEdit(); });
+  el.addEventListener('touchstart', (e)=>{ pressTimer=setTimeout(()=>enterEdit(),600); }, {passive:true});
+  el.addEventListener('touchend',   ()=>{ clearTimeout(pressTimer); }, {passive:true});
+  el.addEventListener('keydown', (e)=>{ if(e.key==='Escape') exitEdit(); });
+  el.addEventListener('blur', ()=> exitEdit());
+}
+function normalizePercentPosition(el,boundary){
+  const b=boundary.getBoundingClientRect();
+  let lp=parsePercent(el.style.left), tp=parsePercent(el.style.top);
+  if(Number.isNaN(lp)||Number.isNaN(tp)){
+    const r=el.getBoundingClientRect();
+    lp=((r.left-b.left)/b.width)*100; tp=((r.top-b.top)/b.height)*100;
   }
-  function getInlineLeftTop(el, brect){
-    let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
-    if(Number.isNaN(lp) || Number.isNaN(tp)){
-      const r=el.getBoundingClientRect();
-      lp = ( (r.left - brect.left) / brect.width ) * 100;
-      tp = ( (r.top  - brect.top ) / brect.height) * 100;
-    }
-    return { leftPercent: lp, topPercent: tp };
+  el.style.left=`${lp}%`; el.style.top=`${tp}%`;
+  el.dataset.leftPercent=lp.toFixed(6); el.dataset.topPercent=tp.toFixed(6);
+}
+function getInlineLeftTop(el,brect){
+  let lp=parsePercent(el.style.left), tp=parsePercent(el.style.top);
+  if(Number.isNaN(lp)||Number.isNaN(tp)){
+    const r=el.getBoundingClientRect();
+    lp=((r.left-brect.left)/brect.width)*100;
+    tp=((r.top -brect.top )/brect.height)*100;
   }
+  return {leftPercent:lp, topPercent:tp};
+}
 function clampPositionsToStage(){
-  const b = previewStage.getBoundingClientRect();
-
-  for (const el of Object.values(texts)) {
-    let r = el.getBoundingClientRect();  // ← 用 let
-
-    // 文本过宽时自动换行并限制最大宽度
-    if (r.width >= b.width) {
-      const isMobileNarrow = b.width <= 480;
-      const capPct = isMobileNarrow ? 96 : 92;
-      el.style.maxWidth   = capPct + '%';
-      el.style.whiteSpace = 'pre-wrap';
-      el.style.wordBreak  = 'break-word';
-      el.style.overflowWrap = 'anywhere';
+  const b=previewStage.getBoundingClientRect();
+  for (const el of Object.values(texts)){
+    let r=el.getBoundingClientRect();
+    if(r.width>=b.width){
+      const isMobileNarrow=b.width<=480; const capPct=isMobileNarrow?96:92;
+      el.style.maxWidth=capPct+'%'; el.style.whiteSpace='pre-wrap'; el.style.wordBreak='break-word'; el.style.overflowWrap='anywhere';
     }
-
-    // 样式变化后重新测量尺寸
-    r = el.getBoundingClientRect();
-
-    // 解析当前位置（百分比）
-    let lp = parsePercent(el.style.left), tp = parsePercent(el.style.top);
-    if (Number.isNaN(lp) || Number.isNaN(tp)) {
-      const p = getInlineLeftTop(el, b);
-      lp = p.leftPercent; tp = p.topPercent;
+    r=el.getBoundingClientRect();
+    let lp=parsePercent(el.style.left), tp=parsePercent(el.style.top);
+    if(Number.isNaN(lp)||Number.isNaN(tp)){ const p=getInlineLeftTop(el,b); lp=p.leftPercent; tp=p.topPercent; }
+    const isCenterTrans=(el.style.transform||'').includes('translateX(-50%)');
+    if(isCenterTrans){
+      const halfWPercent=(r.width/2)/b.width*100;
+      const minCenter=Math.max(0,halfWPercent), maxCenter=Math.min(100,100-halfWPercent);
+      lp=Math.min(Math.max(lp,minCenter),maxCenter); el.style.left=`${lp}%`;
+    }else{
+      const maxLeftP=Math.max(0,(b.width-r.width)/b.width*100);
+      lp=Math.min(Math.max(lp,0),maxLeftP); el.style.left=`${lp}%`;
     }
-
-    // 区分“居中”和“非居中”
-    const isCenterTrans = (el.style.transform || '').includes('translateX(-50%)');
-
-    if (isCenterTrans) {
-      const halfWPercent = (r.width / 2) / b.width * 100;
-      const minCenter = Math.max(0, halfWPercent);
-      const maxCenter = Math.min(100, 100 - halfWPercent);
-      lp = Math.min(Math.max(lp, minCenter), maxCenter);
-      el.style.left = `${lp}%`;
-    } else {
-      const maxLeftP = Math.max(0, (b.width - r.width) / b.width * 100);
-      lp = Math.min(Math.max(lp, 0), maxLeftP);
-      el.style.left = `${lp}%`;
-    }
-
-    // 纵向：top% 当“上边缘”
-    const maxTopP = Math.max(0, (b.height - r.height) / b.height * 100);
-    tp = Math.min(Math.max(tp, 0), maxTopP);
-    el.style.top = `${tp}%`;
-
-    // 同步数据
-    el.dataset.leftPercent = lp.toFixed(6);
-    el.dataset.topPercent  = tp.toFixed(6);
+    const maxTopP=Math.max(0,(b.height-r.height)/b.height*100);
+    tp=Math.min(Math.max(tp,0),maxTopP); el.style.top=`${tp}%`;
+    el.dataset.leftPercent=lp.toFixed(6); el.dataset.topPercent=tp.toFixed(6);
   }
 }
 
-  function layoutGuides(){
-    const {w}=state.inches;
-    const pxPerInPreview = previewStage.clientWidth / w;
-    const bleed = Math.max(0, parseFloat(bleedIn.value)||0);
-    const safe  = Math.max(0, parseFloat(safeIn.value)||0);
-    const bleedPx = bleed * pxPerInPreview;
-    const safePx  = safe  * pxPerInPreview;
+/** ========= 安全线/出血线（仅预览或可选导出） ========= */
+function layoutGuides(){
+  const {w}=state.inches;
+  const pxPerInPreview = previewStage.clientWidth / w;
+  const bleed = Math.max(0, parseFloat(bleedIn.value)||0);
+  const safe  = Math.max(0, parseFloat(safeIn.value)||0);
+  const bleedPx = bleed * pxPerInPreview;
+  const safePx  = safe  * pxPerInPreview;
+  positionRect(trimGuide, 0, 0, previewStage.clientWidth, previewStage.clientHeight);
+  positionRect(safeGuide, safePx, safePx, previewStage.clientWidth-2*safePx, previewStage.clientHeight-2*safePx);
+  positionRect(bleedGuide, -bleedPx, -bleedPx, previewStage.clientWidth+2*bleedPx, previewStage.clientHeight+2*bleedPx);
+}
+function positionRect(el,left,top,w,h){ el.style.left=left+'px'; el.style.top=top+'px'; el.style.width=Math.max(0,w)+'px'; el.style.height=Math.max(0,h)+'px'; }
+showGuides.addEventListener('change', ()=>{ const on=showGuides.checked; [trimGuide,safeGuide,bleedGuide].forEach(el=>el.classList.toggle('hidden',!on)); if(on) layoutGuides(); });
+[safeIn,bleedIn].forEach(inp=> inp.addEventListener('input', ()=>{ if(showGuides.checked) layoutGuides(); }));
 
-    positionRect(trimGuide, 0, 0, previewStage.clientWidth, previewStage.clientHeight);
-    positionRect(safeGuide, safePx, safePx, previewStage.clientWidth-2*safePx, previewStage.clientHeight-2*safePx);
-    positionRect(bleedGuide, -bleedPx, -bleedPx, previewStage.clientWidth+2*bleedPx, previewStage.clientHeight+2*bleedPx);
+/** ========= 导出（PNG / PDF） ========= */
+function requiredPixels(){ return { W: Math.round(state.inches.w*state.dpi), H: Math.round(state.inches.h*state.dpi) }; }
+function checkResolutionOk(){
+  const {W,H}=requiredPixels();
+  let nw=state.preview.naturalW||0, nh=state.preview.naturalH||0;
+  if(!nw||!nh){ nw=previewBgImg.naturalWidth; nh=previewBgImg.naturalHeight; }
+  const ok=(nw>=W*0.95)&&(nh>=H*0.95);
+  if(!ok){
+    return confirm(`Warning: background may be too small for ${state.inches.w}×${state.inches.h} in @ ${state.dpi} dpi.\nNeed ≈ ${W}×${H}px; got ${nw||'unknown'}×${nh||'unknown'}.\n\nProceed anyway?`);
   }
-  function positionRect(el, left, top, w, h){
-    el.style.left = left+'px'; el.style.top = top+'px'; el.style.width = Math.max(0,w)+'px'; el.style.height = Math.max(0,h)+'px';
-  }
-  showGuides.addEventListener('change', ()=>{
-    const on = showGuides.checked;
-    [trimGuide, safeGuide, bleedGuide].forEach(el=> el.classList.toggle('hidden', !on));
-    if(on) layoutGuides();
-  });
-  [safeIn, bleedIn].forEach(inp=> inp.addEventListener('input', ()=>{ if(showGuides.checked) layoutGuides(); }));
-
-  function requiredPixels(){ return { W: Math.round(state.inches.w*state.dpi), H: Math.round(state.inches.h*state.dpi) }; }
-  function checkResolutionOk(){
-    const {W,H} = requiredPixels();
-    let nw = state.preview.naturalW || 0, nh = state.preview.naturalH || 0;
-    if(!nw || !nh){
-      nw = previewBgImg.naturalWidth; nh = previewBgImg.naturalHeight;
-    }
-    const ok = (nw >= W*0.95) && (nh >= H*0.95);
-    if(!ok){
-      const msg = `Warning: background may be too small for ${state.inches.w}×${state.inches.h} in @ ${state.dpi} dpi.\nNeed ≈ ${W}×${H}px; got ${nw||'unknown'}×${nh||'unknown'}.\n\nProceed anyway? (Cancel to go back)`;
-      return confirm(msg);
-    }
-    return true;
-  }
-  function shouldDownscale(wPx, hPx){
-    const MAX_SIDE = 10000, MAX_PIXELS = 80e6;
-    return (wPx > MAX_SIDE || hPx > MAX_SIDE || (wPx*hPx) > MAX_PIXELS);
-  }
-
-  btnWebPng.addEventListener('click', async()=>{
-      if (!window.html2canvas) { 
-    alert('Exporter is still loading, please try again in a moment.'); 
-    return; 
-  }
-    
+  return true;
+}
+function shouldDownscale(wPx,hPx){
+  const MAX_SIDE=10000, MAX_PIXELS=80e6;
+  return (wPx>MAX_SIDE || hPx>MAX_SIDE || (wPx*hPx)>MAX_PIXELS);
+}
+btnWebPng.addEventListener('click', async()=>{
+  if (!window.html2canvas){ alert('Exporter is still loading, please try again in a moment.'); return; }
+  try{
+    document.body.style.overflow='hidden';
+    status('Generating web preview PNG…');
+    await waitActiveFontsWithTimeout(1200);
+    const dataUrl=await html2canvas(previewStage,{
+      allowTaint:false, useCORS:true, backgroundColor:'#ffffff', scale:1,
+      ignoreElements: el => (el && el.classList && el.classList.contains('export-ignore'))
+    }).then(c=>c.toDataURL('image/png'));
+    const a=document.createElement('a'); a.href=dataUrl; a.download='poster-web-'+state.size+'.png'; document.body.appendChild(a); a.click(); a.remove();
+    status('Done.');
+  }catch(e){ handleExportError(e); } finally{ document.body.style.overflow=''; }
+});
+btnPrintPng.addEventListener('click', async()=>{
+  if (!window.html2canvas){ alert('Exporter is still loading, please try again in a moment.'); return; }
+  if(!checkResolutionOk()) return;
+  await withBusy(btnPrintPng, async()=>{
     try{
-      document.body.style.overflow='hidden';
-      status('Generating web preview PNG…');
+      status(`Rendering print PNG (${state.dpi} dpi)…`);
       await waitActiveFontsWithTimeout(1200);
-      const dataUrl=await html2canvas(previewStage,{
-        allowTaint:false, useCORS:true, backgroundColor:'#ffffff', scale:1,
-        ignoreElements: el => (el && el.classList && el.classList.contains('export-ignore'))
-      }).then(c=>c.toDataURL('image/png'));
-      const a=document.createElement('a'); a.href=dataUrl; a.download='poster-web-'+state.size+'.png'; document.body.appendChild(a); a.click(); a.remove();
+      const dataUrl=await renderPrintCanvas(false).then(c=>c.toDataURL('image/png'));
+      const a=document.createElement('a'); a.href=dataUrl; a.download='poster-print-'+state.size+'-'+state.dpi+'dpi.png'; document.body.appendChild(a); a.click(); a.remove();
       status('Done.');
-    } catch(e){
-      handleExportError(e);
-    } finally { document.body.style.overflow=''; }
+    }catch(e){ handleExportError(e); throw e; }
   });
-
-  btnPrintPng.addEventListener('click', async()=>{
-      if (!window.html2canvas) { 
-    alert('Exporter is still loading, please try again in a moment.'); 
-    return; 
+});
+btnPrintPdf.addEventListener('click', async()=>{
+  if(!checkResolutionOk()) return;
+  await withBusy(btnPrintPdf, async()=>{
+    try{
+      status(`Rendering print PDF (${state.dpi} dpi, true inches)…`);
+      await waitActiveFontsWithTimeout(1200);
+      const canvas=await renderPrintCanvas(includeGuidesPdf.checked);
+      const { jsPDF }=window.jspdf;
+      const wIn=state.inches.w, hIn=state.inches.h;
+      const pdf=new jsPDF({orientation:wIn>hIn?'l':'p', unit:'in', format:[wIn,hIn]});
+      const imgData=canvas.toDataURL('image/jpeg',1);
+      pdf.addImage(imgData,'JPEG',0,0,wIn,hIn);
+      pdf.save('poster-print-'+state.size+'-'+state.dpi+'dpi.pdf');
+      status('Done.');
+    }catch(e){ handleExportError(e); throw e; }
+  });
+});
+function handleExportError(e){
+  console.error(e);
+  if(isIOS()){
+    alert('Export failed or blank file:\n• Select 200 DPI and try;\n• Or export on a computer.');
+  }else{
+    alert('Export failed. Try 200 DPI or a smaller image / different browser.');
   }
-    
-    if(!checkResolutionOk()) return;
-    await withBusy(btnPrintPng, async()=>{
-      try{
-        status(`Rendering print PNG (${state.dpi} dpi)…`);
-        await waitActiveFontsWithTimeout(1200);
-        const dataUrl=await renderPrintCanvas(false).then(c=>c.toDataURL('image/png'));
-        const a=document.createElement('a'); a.href=dataUrl; a.download='poster-print-'+state.size+'-'+state.dpi+'dpi.png'; document.body.appendChild(a); a.click(); a.remove();
-        status('Done.');
-      } catch(e){ handleExportError(e); throw e; }
-    });
-  });
-
-  btnPrintPdf.addEventListener('click', async()=>{
-    if(!checkResolutionOk()) return;
-    await withBusy(btnPrintPdf, async()=>{
-      try{
-        status(`Rendering print PDF (${state.dpi} dpi, true inches)…`);
-        await waitActiveFontsWithTimeout(1200);
-        const canvas=await renderPrintCanvas(includeGuidesPdf.checked);
-        const { jsPDF }=window.jspdf;
-        const wIn=state.inches.w, hIn=state.inches.h;
-        const pdf=new jsPDF({orientation:wIn>hIn?'l':'p', unit:'in', format:[wIn,hIn]});
-        const imgData=canvas.toDataURL('image/jpeg',1);
-        pdf.addImage(imgData,'JPEG',0,0,wIn,hIn);
-        pdf.save('poster-print-'+state.size+'-'+state.dpi+'dpi.pdf');
-        status('Done.');
-      } catch(e){ handleExportError(e); throw e; }
-    });
-  });
-
-  function handleExportError(e){
-    console.error(e);
-    if(isIOS()){
-      alert('Export failed or blank file:\\n• Please select 200 DPI from the \"Print DPI\" dropdown and try again;\\n• Or use a computer to export the file again.');
-    }else{
-      alert('Export failed. Try 200 DPI or a smaller image. If the issue persists, try on a desktop.');
-    }
-  }
-
-    // === Wait only active fonts (family + weight + style) with timeout ===
-async function waitActiveFontsWithTimeout(timeoutMs = 1200) {
-  if (!document.fonts || !document.fonts.check) return;
-
-  // 收集舞台上 3 个文本框“实际正在使用”的 family / weight / style
-  const needLoads = new Set();
-  ['t1','t2','t3'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const cs = getComputedStyle(el);
-
-    // family
-    const famName = (cs.fontFamily.split(',')[0] || '').replace(/['"]/g,'').trim();
-    if (!famName) return;
-
-    // weight 归一：bold→700, normal→400，其它非数值→400
-    let w = cs.fontWeight;
-    if (w === 'bold') w = '700';
-    if (w === 'normal') w = '400';
-    if (!/^\d+$/.test(String(w))) w = '400';
-
-    // style（normal可省略；italic/oblique需保留）
-    let style = cs.fontStyle;
-    if (!style || style === 'normal') style = '';
-    else style = style + ' ';
-
-    // document.fonts.load 语法：[style] [weight] <size> <family>
+}
+async function waitActiveFontsWithTimeout(timeoutMs=1200){
+  if(!document.fonts || !document.fonts.check) return;
+  const needLoads=new Set();
+  ['t1','t2','t3'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const cs=getComputedStyle(el);
+    const famName=(cs.fontFamily.split(',')[0]||'').replace(/['"]/g,'').trim(); if(!famName) return;
+    let w=cs.fontWeight; if(w==='bold') w='700'; if(w==='normal') w='400'; if(!/^\d+$/.test(String(w))) w='400';
+    let style=cs.fontStyle; if(!style||style==='normal') style=''; else style=style+' ';
     needLoads.add(`${style}${w} 16px ${famName}`);
   });
+  if(needLoads.size===0) return;
+  const loads=[...needLoads].map(desc=>document.fonts.load(desc));
+  const waitAll=Promise.allSettled(loads);
+  const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('font-timeout')), timeoutMs));
+  try{ await Promise.race([waitAll,timeout]); }
+  catch(e){ if(e && e.message==='font-timeout'){ const keep=confirm('Fonts are still loading. Wait longer?\nOK=wait\nCancel=export now'); if(keep) await waitAll; } }
+}
+async function renderPrintCanvas(includeGuides){
+  const {w,h}=state.inches; let dpi=state.dpi;
+  let W=Math.round(w*dpi), H=Math.round(h*dpi);
+  if(shouldDownscale(W,H)){ dpi=Math.min(200,dpi); W=Math.round(w*dpi); H=Math.round(h*dpi); status(`Target too large → auto ${dpi} dpi (${W}×${H}).`); }
+  printStage.innerHTML=''; printStage.style.width=W+'px'; printStage.style.height=H+'px';
+  const wrap=document.createElement('div');
+  wrap.style.cssText=`position:relative;width:${W}px;height:${H}px;overflow:visible;background:#ffffff;`;
+  const img=document.createElement('img');
+  img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
+  img.crossOrigin='anonymous';
+  img.src=state.preview.bgLarge || state.preview.bgSmall || '';
+  wrap.appendChild(img);
+  const pr=previewStage.getBoundingClientRect();
+  const sx=W/pr.width, sy=H/pr.height;
+  await new Promise(res=>{ if(!img.src){ res(); return; } img.onload=res; img.onerror=res; });
 
-  if (needLoads.size === 0) return;
+  for(const id of ['t1','t2','t3']){
+    const src=texts[id]; const srec=src.getBoundingClientRect(); const cs=getComputedStyle(src); const el=document.createElement('div');
+    el.textContent=src.textContent; el.style.position='absolute';
 
-  const loads = [...needLoads].map(desc => document.fonts.load(desc));
-  const waitAll = Promise.allSettled(loads);
-  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('font-timeout')), timeoutMs));
-
-  try {
-    await Promise.race([waitAll, timeout]);
-  } catch (e) {
-    if (e && e.message === 'font-timeout') {
-      const keep = confirm('Fonts are still loading. Wait a bit longer for accurate export?\n\nOK = keep waiting\nCancel = export now (may use fallback fonts)');
-      if (keep) await waitAll;
+    const topPx=(srec.top-pr.top)*sy; el.style.top=topPx+'px';
+    if((src.style.transform||'').includes('translateX(-50%)')){
+      const centerLeftPx=((srec.left-pr.left)+srec.width/2)*sx;
+      el.style.left=centerLeftPx+'px'; el.style.transform='translateX(-50%)';
+    }else{
+      el.style.left=((srec.left-pr.left)*sx)+'px';
     }
+    el.style.width=(srec.width*sx)+'px';
+    el.style.whiteSpace='pre-wrap'; el.style.wordBreak='break-word'; el.style.overflowWrap='anywhere';
+
+    const fsPx=parseFloat(cs.fontSize)||16;
+    const lhCss=cs.lineHeight;
+    let linePx;
+    if(lhCss==='normal') linePx=fsPx*1.3;
+    else if(lhCss.endsWith && lhCss.endsWith('px')) linePx=parseFloat(lhCss)||fsPx*1.3;
+    else { const n=parseFloat(lhCss); linePx=Number.isFinite(n)? fsPx*n : fsPx*1.3; }
+
+    el.style.fontSize=(fsPx*sy)+'px';
+    el.style.lineHeight=(linePx*sy)+'px';
+    el.style.fontFamily=cs.fontFamily; el.style.color=cs.color; el.style.fontWeight=cs.fontWeight; el.style.fontStyle=cs.fontStyle; el.style.textDecoration=cs.textDecoration; el.style.textAlign=cs.textAlign;
+
+    const sds=parseInt(src.dataset.shadowS||'0',10);
+    const sblur=parseFloat(src.dataset.shadowBlur||'0');
+    const scolor=src.dataset.shadowColor||'#000';
+    if(sds>0){ const off=Math.max(1,Math.round(sds/10))*sy; const bl=Math.max(0.5,sblur*sy); el.style.textShadow=`${off}px ${off}px ${bl}px ${scolor}`; }
+    wrap.appendChild(el);
   }
+
+  if(includeGuides){
+    const safe=Math.max(0, parseFloat(safeIn.value)||0);
+    const bleed=Math.max(0, parseFloat(bleedIn.value)||0);
+    const safePx=safe*(W/state.inches.w), bleedPx=bleed*(W/state.inches.w);
+    const trim=document.createElement('div'); trim.style.cssText=`position:absolute;left:0;top:0;width:${W}px;height:${H}px;outline:4px dashed rgba(239,68,68,.9)`;
+    const safeR=document.createElement('div'); safeR.style.cssText=`position:absolute;left:${safePx}px;top:${safePx}px;width:${W-2*safePx}px;height:${H-2*safePx}px;outline:4px dashed rgba(34,197,94,.9)`;
+    const bleedR=document.createElement('div'); bleedR.style.cssText=`position:absolute;left:${-bleedPx}px;top:${-bleedPx}px;width:${W+2*bleedPx}px;height:${H+2*bleedPx}px;outline:4px dashed rgba(59,130,246,.9)`;
+    wrap.appendChild(bleedR); wrap.appendChild(trim); wrap.appendChild(safeR);
+  }
+
+  printStage.appendChild(wrap);
+  const canvas=await html2canvas(wrap,{ allowTaint:false, useCORS:true, backgroundColor:'#ffffff', scale:1, windowWidth:W, windowHeight:H });
+  return canvas;
+}
+async function withBusy(el,fn){
+  const old=el.textContent; el.disabled=true; el.textContent='Working...'; el.classList.add('opacity-70','cursor-wait');
+  try{ await fn(); }catch(_){ } finally{ el.disabled=false; el.textContent=old; el.classList.remove('opacity-70','cursor-wait'); }
 }
 
-  async function renderPrintCanvas(includeGuides){
-    const {w,h}=state.inches; let dpi=state.dpi;
-    let W=Math.round(w*dpi), H=Math.round(h*dpi);
-    if (shouldDownscale(W,H)) {
-      dpi = Math.min(200, dpi); W = Math.round(w*dpi); H = Math.round(h*dpi);
-      status(`Target too large → auto-downgraded to ${dpi} dpi (${W}×${H}px).`);
-    }
-
-    printStage.innerHTML=''; printStage.style.width=W+'px'; printStage.style.height=H+'px';
-    const wrap=document.createElement('div');
-    wrap.style.cssText=`position:relative;width:${W}px;height:${H}px;overflow:visible;background:#ffffff;`;
-    const img=document.createElement('img');
-    img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
-    img.crossOrigin='anonymous';
-    img.src=state.preview.bgLarge || state.preview.bgSmall || '';
-    wrap.appendChild(img);
-
-    const pr=previewStage.getBoundingClientRect();
-    const sx=W/pr.width, sy=H/pr.height;
-    const k=(sx+sy)/2;
-
-    await new Promise(res=>{ if(!img.src){ res(); return; } img.onload=res; img.onerror=res; });
-
-for (const id of ['t1','t2','t3']) {
-  const src  = texts[id];
-  const srec = src.getBoundingClientRect();
-  const cs   = getComputedStyle(src);
-  const el   = document.createElement('div');
-
-  el.textContent = src.textContent;
-  el.style.position = 'absolute';
-
-// 垂直位置（同原来）
-const topPx  = (srec.top  - pr.top ) * sy;
-el.style.top = topPx + 'px';
-
-// 水平位置：区分是否带 translateX(-50%)
-if ((src.style.transform || '').includes('translateX(-50%)')) {
-  // 居中：left 取“中心点像素”，居中由 translateX(-50%) 完成
-  const centerLeftPx = ((srec.left - pr.left) + srec.width / 2) * sx;
-  el.style.left = centerLeftPx + 'px';
-  el.style.transform = 'translateX(-50%)';
-} else {
-  // 非居中：按左边缘像素
-  el.style.left = ((srec.left - pr.left) * sx) + 'px';
-}
-
-  // 锁定导出宽度 = 屏幕宽度 * sx，确保换行一致
-  el.style.width       = (srec.width * sx) + 'px';
-  el.style.whiteSpace  = 'pre-wrap';
-  el.style.wordBreak   = 'break-word';
-  el.style.overflowWrap= 'anywhere';
-
-  // 计算字号与行高（把各种行高统一成像素）
-  const fsPx  = parseFloat(cs.fontSize) || 16;
-  const lhCss = cs.lineHeight;
-  let linePx;
-  if (lhCss === 'normal') {
-    linePx = fsPx * 1.3;
-  } else if (lhCss.endsWith && lhCss.endsWith('px')) {
-    linePx = parseFloat(lhCss) || fsPx * 1.3;
-  } else {
-    const n = parseFloat(lhCss);
-    linePx = Number.isFinite(n) ? fsPx * n : fsPx * 1.3;
-  }
-
-  // 垂直量用 sy（关键）
-  const outFontSize = fsPx  * sy;
-  const outLinePx   = linePx * sy;
-
-  el.style.fontSize   = outFontSize + 'px';
-  el.style.lineHeight = outLinePx   + 'px';
-
-  // 其它样式一比一拷贝
-  el.style.fontFamily   = cs.fontFamily;
-  el.style.color        = cs.color;
-  el.style.fontWeight   = cs.fontWeight;
-  el.style.fontStyle    = cs.fontStyle;
-  el.style.textDecoration = cs.textDecoration;
-  el.style.textAlign    = cs.textAlign;
-
-  // 阴影随垂直缩放更自然（也可用 k，看你的审美）
-  const sds   = parseInt(src.dataset.shadowS || '0', 10);
-  const sblur = parseFloat(src.dataset.shadowBlur || '0');
-  const scolor= src.dataset.shadowColor || '#000';
-  if (sds > 0) {
-    const off = Math.max(1, Math.round(sds/10)) * sy;
-    const bl  = Math.max(0.5, sblur * sy);
-    el.style.textShadow = `${off}px ${off}px ${bl}px ${scolor}`;
-  }
-
-  wrap.appendChild(el);
-}
-
-    if(includeGuides){
-      const safe = Math.max(0, parseFloat(safeIn.value)||0);
-      const bleed= Math.max(0, parseFloat(bleedIn.value)||0);
-      const safePx  = safe  * (W/state.inches.w);
-      const bleedPx = bleed * (W/state.inches.w);
-      const trim = document.createElement('div');
-      trim.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px;outline:4px dashed rgba(239,68,68,.9)`;
-      const safeR = document.createElement('div');
-      safeR.style.cssText = `position:absolute;left:${safePx}px;top:${safePx}px;width:${W-2*safePx}px;height:${H-2*safePx}px;outline:4px dashed rgba(34,197,94,.9)`;
-      const bleedR= document.createElement('div');
-      bleedR.style.cssText= `position:absolute;left:${-bleedPx}px;top:${-bleedPx}px;width:${W+2*bleedPx}px;height:${H+2*bleedPx}px;outline:4px dashed rgba(59,130,246,.9)`;
-      wrap.appendChild(bleedR); wrap.appendChild(trim); wrap.appendChild(safeR);
-    }
-
-    printStage.appendChild(wrap);
-    const canvas = await html2canvas(wrap, {
-      allowTaint:false, useCORS:true, backgroundColor:'#ffffff', scale:1,
-      windowWidth:W, windowHeight:H,
-    });
-    return canvas;
-  }
-
-  async function withBusy(el, fn){
-    const old = el.textContent;
-    el.disabled = true;
-    el.textContent = 'Working...';
-    el.classList.add('opacity-70','cursor-wait');
-    try { await fn(); }
-    catch(e){ /* handled above */ }
-    finally{
-      el.disabled = false;
-      el.textContent = old;
-      el.classList.remove('opacity-70','cursor-wait');
-    }
-  }
-
-  // Patch 5: Keyboard micro-adjust (Shift = 5px)
-  document.addEventListener('keydown', (e)=>{
-    const el = texts[state.activeTextId]; if (!el) return;
-    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
-    e.preventDefault();
-    const step = e.shiftKey ? 5 : 1;
-    const b = previewStage.getBoundingClientRect();
-    let lp = parseFloat(el.dataset.leftPercent||'0');
-    let tp = parseFloat(el.dataset.topPercent ||'0');
-
-    if (e.key === 'ArrowLeft')  { lp -= (step / b.width)  * 100; }
-    if (e.key === 'ArrowRight') { lp += (step / b.width)  * 100; }
-    if (e.key === 'ArrowUp')    { tp -= (step / b.height) * 100; }
-    if (e.key === 'ArrowDown')  { tp += (step / b.height) * 100; }
-
-    lp = Math.max(0, Math.min(lp, 100));
-    tp = Math.max(0, Math.min(tp, 100));
-    el.style.left = `${lp}%`; el.style.top = `${tp}%`;
-    el.dataset.leftPercent = lp.toFixed(6);
-    el.dataset.topPercent  = tp.toFixed(6);
-    clampPositionsToStage();
-  });
-
-  // Patch 6: Inline editing (dblclick / long-press; Esc/blur to exit)
-  ['t1','t2','t3'].forEach(id=>{
-    const el = texts[id];
-    let pressTimer = null;
-    const enterEdit = ()=>{
-      if (el.classList.contains('editing')) return;
-      el.classList.add('editing');
-      el.contentEditable = 'true';
-      el.focus();
-    };
-    const exitEdit = ()=>{
-      if (!el.classList.contains('editing')) return;
-      el.classList.remove('editing');
-      el.contentEditable = 'false';
-      loadTextEditorFrom(id);
-      normalizePercentPosition(el, previewStage);
-    };
-    el.addEventListener('dblclick', (e)=>{ e.preventDefault(); enterEdit(); });
-    el.addEventListener('touchstart', (e)=>{ pressTimer = setTimeout(()=> enterEdit(), 600); }, {passive:true});
-    el.addEventListener('touchend', ()=> clearTimeout(pressTimer));
-    el.addEventListener('touchmove', ()=> clearTimeout(pressTimer));
-    el.addEventListener('blur', exitEdit);
-    el.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { e.preventDefault(); el.blur(); } });
-  });
-
-    // Re-layout and clamp on resize (debounced)
-let _rsTimer = null;
-window.addEventListener('resize', ()=>{
-  clearTimeout(_rsTimer);
-  _rsTimer = setTimeout(()=>{
-    layoutGuides();
-    // 若你的模板需要随宽度自适应，可再启用下一行；不需要就别启用避免重置位置：
-    // applyLayout(currentLayoutName);
-    clampPositionsToStage();
-  }, 80);
+/** ========= 键盘微调 ========= */
+document.addEventListener('keydown', (e)=>{
+  const el=texts[state.activeTextId]; if(!el) return;
+  if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
+  e.preventDefault();
+  const step=e.shiftKey?5:1;
+  const b=previewStage.getBoundingClientRect();
+  let lp=parseFloat(el.dataset.leftPercent||'0'), tp=parseFloat(el.dataset.topPercent||'0');
+  if(e.key==='ArrowLeft'){ lp -= (step/b.width)*100; }
+  if(e.key==='ArrowRight'){ lp += (step/b.width)*100; }
+  if(e.key==='ArrowUp'){ tp -= (step/b.height)*100; }
+  if(e.key==='ArrowDown'){ tp += (step/b.height)*100; }
+  lp=Math.max(0,Math.min(lp,100)); tp=Math.max(0,Math.min(tp,100));
+  el.style.left=`${lp}%`; el.style.top=`${tp}%`;
+  el.dataset.leftPercent=lp.toFixed(6); el.dataset.topPercent=tp.toFixed(6);
+  clampPositionsToStage();
 });
 
-  // First render
-  t1.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-  t2.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-  t3.style.fontFamily="'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-
-  normalizePercentPosition(t1, previewStage);
-  normalizePercentPosition(t2, previewStage);
-  normalizePercentPosition(t3, previewStage);
-
-  setSize('24x30');
-  setDpi(dpiSelect.value);
-  applyPreviewBg();
-  buildThumbs();
-  setActiveText(state.activeTextId);
-  layoutGuides();
-  status('Ready. Choose a background, edit texts, and export.');
-    // --- Quick Save / Load / Clear using localStorage ---
-btnSave.addEventListener('click', () => {
-  const payload = {
+/** ========= Save / Load / Clear（本地存储） ========= */
+btnSave.addEventListener('click', ()=>{
+  const payload={
     state,
-    texts: ['t1','t2','t3'].map(id => {
-      const el = document.getElementById(id);
-      return {
-        id,
-        text: el.textContent,
-        style: {
-          left: el.style.left,
-          top: el.style.top,
-          transform: el.style.transform,
-          textAlign: el.style.textAlign,
-          fontFamily: el.style.fontFamily,
-          fontSize: el.style.fontSize,
-          color: el.style.color,
-          fontWeight: el.style.fontWeight,
-          fontStyle: el.style.fontStyle,
-          textDecoration: el.style.textDecoration,
-          whiteSpace: el.style.whiteSpace,
-          maxWidth: el.style.maxWidth,
-          wordBreak: el.style.wordBreak,
-          overflowWrap: el.style.overflowWrap
-        },
-        dataset: {
-          leftPercent: el.dataset.leftPercent,
-          topPercent: el.dataset.topPercent,
-          shadowS: el.dataset.shadowS,
-          shadowBlur: el.dataset.shadowBlur,
-          shadowColor: el.dataset.shadowColor
-        }
-      };
+    texts: ['t1','t2','t3'].map(id=>{
+      const el=document.getElementById(id);
+      return { id, html:el.innerHTML, style:el.getAttribute('style') };
     })
   };
-  localStorage.setItem('posterDesign', JSON.stringify(payload));
-  status('Design saved locally.');
-});
+  localStorage.setItem('posterSaved', JSON.stringify(payload));
+  status('Saved.');
+}, {passive:true});
+btnLoad.addEventListener('click', ()=>{
+  try{
+    const raw=localStorage.getItem('posterSaved'); if(!raw) return alert('Nothing saved.');
+    const saved=JSON.parse(raw);
+    setSize(saved.state.size); dpiSelect.value=String(saved.state.dpi); setDpi(saved.state.dpi);
+    saved.texts.forEach(t=>{ const el=document.getElementById(t.id); if(!el) return; el.innerHTML=t.html; el.setAttribute('style',t.style); });
+    clampPositionsToStage(); loadTextEditorFrom(state.activeTextId);
+    status('Loaded.');
+  }catch(e){ alert('Load failed.'); }
+}, {passive:true});
+btnClear.addEventListener('click', ()=>{ localStorage.removeItem('posterSaved'); status('Cleared.'); }, {passive:true});
 
-btnLoad.addEventListener('click', () => {
-  const raw = localStorage.getItem('posterDesign');
-  if (!raw) { status('No saved design found.'); return; }
-  try {
-    const payload = JSON.parse(raw);
-
-    // restore size/dpi/background picks
-    if (payload.state?.size) { sizeSelect.value = payload.state.size; setSize(payload.state.size); }
-    if (payload.state?.dpi)  { dpiSelect.value  = payload.state.dpi;  setDpi(payload.state.dpi); }
-    if (payload.state?.preview) {
-      Object.assign(state.preview, payload.state.preview);
-      applyPreviewBg();
-    }
-
-    // restore texts
-    (payload.texts || []).forEach(t => {
-      const el = document.getElementById(t.id);
-      if (!el) return;
-      el.textContent = t.text || '';
-      Object.assign(el.style, t.style || {});
-      if (t.dataset) {
-        el.dataset.leftPercent  = t.dataset.leftPercent  || el.dataset.leftPercent;
-        el.dataset.topPercent   = t.dataset.topPercent   || el.dataset.topPercent;
-        el.dataset.shadowS      = t.dataset.shadowS      || el.dataset.shadowS;
-        el.dataset.shadowBlur   = t.dataset.shadowBlur   || el.dataset.shadowBlur;
-        el.dataset.shadowColor  = t.dataset.shadowColor  || el.dataset.shadowColor;
-      }
-    });
-
-    clampPositionsToStage();
-    layoutGuides();
-    loadTextEditorFrom(state.activeTextId);
-    status('Design loaded.');
-  } catch {
-    status('Failed to load saved design.');
-  }
-});
-
-btnClear.addEventListener('click', () => {
-  localStorage.removeItem('posterDesign');
-  status('Saved design cleared.');
-});
-    // === Init Center Guides visibility on load ===
-(function initCenterGuides(){
-  const on = guideSelect.value === 'on';
-  guideH.classList.toggle('hidden', !on);
-  guideV.classList.toggle('hidden', !on);
-})();
-
-// === Init Trim/Safe/Bleed guides visibility on load ===
-(function initFrameGuides(){
-  if (showGuides && showGuides.checked) {
-    [trimGuide, safeGuide, bleedGuide].forEach(el => el.classList.remove('hidden'));
-    layoutGuides();
-  } else {
-    [trimGuide, safeGuide, bleedGuide].forEach(el => el.classList.add('hidden'));
-  }
-})();
-// Font load quick check
+/** ========= 初始渲染 ========= */
+setSize(state.size);
+setActiveText('t1');
+applyLayout('centered');
   </script>
-<!-- Export & App Scripts (placed at end for faster first paint) -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
