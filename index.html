@@ -16,6 +16,13 @@
 <!-- Local Fonts preloads (relative paths; safe for GitHub Pages subpaths) -->
 
   <style>
+    /* 离屏渲染容器，防跳动、防点选 */
+    #printStage{
+      position: fixed;
+      left: -10000px;
+      top: -10000px;
+      pointer-events: none;
+    }
     
   /* ===== Local font faces (exactly as in your repo) ===== */
   
@@ -482,7 +489,7 @@ if (v === '24x30') {
   previewStage.style.aspectRatio = '4/5';
 } else {
   state.inches = { w:24, h:50 };
-  previewStage.style.aspectRatio = (24 / 50); // 用数值更稳
+  previewStage.style.aspectRatio =(24 / 50); // 用数值更稳
 }
 
 if (isIOS()) {
@@ -587,23 +594,69 @@ if (isIOS()) {
     state.pageIndex[state.size]=totalPages-1; buildThumbs();
   });
 
-  bgUpload.addEventListener('change', async(e)=>{
-    const file = (e.target && e.target.files && e.target.files[0]) || null;
-if (!file) return;
-    const dataUrl=await new Promise((resolve,reject)=>{ const fr=new FileReader(); fr.onload=()=>resolve(fr.result); fr.onerror=reject; fr.readAsDataURL(file); });
-    const img=new Image();
-    img.onload=()=>{
-      state.preview.isLocal=true;
-      state.preview.bgSmall=dataUrl;
-      state.preview.bgLarge=dataUrl;
-      state.preview.naturalW=img.naturalWidth;
-      state.preview.naturalH=img.naturalHeight;
-      applyPreviewBg();
-      status(`Local background loaded: ${img.naturalWidth}×${img.naturalHeight}`);
-      e.target.value='';
-    };
-    img.src=dataUrl;
+bgUpload.addEventListener('change', async (e) => {
+  const file = (e.target && e.target.files && e.target.files[0]) || null;
+  if (!file) return;
+
+  // 通过压缩图像进行预处理（限制最大尺寸）
+  const dataUrl = await compressImage(file);  // 这里调用压缩函数来处理文件
+  const img = new Image();
+  
+  img.onload = () => {
+    state.preview.isLocal = true;
+    state.preview.bgSmall = dataUrl;
+    state.preview.bgLarge = dataUrl;
+    state.preview.naturalW = img.naturalWidth;
+    state.preview.naturalH = img.naturalHeight;
+    
+    applyPreviewBg();
+    status(`Local background loaded: ${img.naturalWidth}×${img.naturalHeight}`);
+    e.target.value = '';  // 重置文件输入，避免重复选择相同文件时触发事件
+  };
+  
+  img.src = dataUrl;  // 设置图像源为处理后的 dataUrl
+});
+
+// 压缩图像函数（可根据需要调整压缩参数）
+async function compressImage(file) {
+  const maxWidth = 1200;  // 最大宽度
+  const maxHeight = 1200;  // 最大高度
+  
+  // 创建一个新的 Image 对象
+  const img = new Image();
+  
+  // 使用 FileReader 将图像加载到内存中
+  const dataUrl = await new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
   });
+
+  // 图像加载完毕后进行压缩
+  img.src = dataUrl;
+  
+  return new Promise((resolve, reject) => {
+    img.onload = () => {
+      // 获取压缩后的宽高比例
+      const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // 设置压缩后的宽高
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      
+      // 绘制图像并返回压缩后的图片
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      // 返回压缩后的图像数据
+      resolve(canvas.toDataURL(file.type));  // 返回 dataURL 格式的压缩图像
+    };
+    
+    img.onerror = reject;
+  });
+}
   resetBg.addEventListener('click', ()=>{
     const v = state.size;
     Object.assign(state.preview, { isLocal:false, bgSmall:DEFAULT_BG[v].small, bgLarge:DEFAULT_BG[v].large, naturalW:null, naturalH:null });
@@ -1007,7 +1060,10 @@ function shouldDownscale(wPx, hPx){
 // 根据设备反算可承受的 DPI（优先使用用户选择，但不超过上限）
 function autoDpiForDevice(wIn, hIn, preferDpi) {
   const MAX_PIXELS = isIOS() ? 36e6 : 64e6;
-  const dpiMax = Math.floor(Math.sqrt(MAX_PIXELS / (wIn * hIn)));
+  const MAX_SIDE   = isIOS() ? 8192  : 10000;
+  const dpiByPixels = Math.floor(Math.sqrt(MAX_PIXELS / (wIn * hIn)));
+  const dpiBySide   = Math.floor(Math.min(MAX_SIDE / wIn, MAX_SIDE / hIn));
+  const dpiMax = Math.max(72, Math.min(dpiByPixels, dpiBySide));
   return Math.min(preferDpi, Math.max(72, dpiMax)); // 底限 72dpi
 }
 
@@ -1028,6 +1084,7 @@ btnWebPng.addEventListener('click', async()=>{
       scale:1,
       ignoreElements: el => (el && el.classList && el.classList.contains('export-ignore'))
     });
+    printStage.innerHTML = '';
 
     await new Promise(res => canvas.toBlob((blob) => {
       if (blob) {
@@ -1101,7 +1158,7 @@ btnPrintPdf.addEventListener('click', async()=>{
       });
 
       // 直接用 canvas（内部会自行编码 JPEG）
-      pdf.addImage(canvas, 'JPEG', 0, 0, wIn, hIn);
+      pdf.addImage(canvas, 'JPEG', 0, 0, wIn, hIn, undefined, 'FAST');
 
       const filename = `poster-print-${state.size}-${effDpi}dpi.pdf`;
       if (isIOS()) {
@@ -1135,13 +1192,21 @@ function downloadBlob(blob, filename) {
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
-  // iOS 兜底：必要时新窗口预览再手动保存
-  if (isIOS()) a.target = '_blank';
+
+  // 针对 iOS 设备进行优化：iOS 上可能会有文件下载的限制或问题
+  if (isIOS()) {
+    // 在 iOS 上使用新窗口打开 Blob 文件并手动保存
+    a.target = '_blank';  // 打开新的窗口（或标签）
+    // 提供弹窗指引
+    alert('The file will open in a new tab. Please manually save it from there.');
+  }
+
   document.body.appendChild(a);
   a.click();
   a.remove();
-  // 延后 revoke，避免个别浏览器“点击瞬间被回收”导致空白/失败
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+
+  // 延迟撤销 URL 对象，避免内存泄漏
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 // 备用兜底（极少数浏览器 toBlob 返回 null）
@@ -1149,7 +1214,15 @@ function downloadDataURL(dataUrl, filename) {
   const a = document.createElement('a');
   a.href = dataUrl;
   a.download = filename;
-  if (isIOS()) a.target = '_blank';
+
+  // 针对 iOS 设备进行优化：iOS 可能不支持直接通过 Data URL 下载大文件
+  if (isIOS()) {
+    // 在 iOS 上使用新窗口打开 Data URL 文件并手动保存
+    a.target = '_blank';  // 打开新的窗口（或标签）
+    // 提供弹窗指引
+    alert('The file will open in a new tab. Please manually save it from there.');
+  }
+
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -1159,37 +1232,24 @@ function downloadDataURL(dataUrl, filename) {
 async function waitActiveFontsWithTimeout(timeoutMs = 1200) {
   if (!document.fonts || !document.fonts.check) return;
 
-  // 收集舞台上 3 个文本框“实际正在使用”的 family / weight / style
+// 等待字体加载，若超时则提示
+async function waitActiveFontsWithTimeout(timeoutMs = 1200) {
+  if (!document.fonts || !document.fonts.check) return;
+
   const needLoads = new Set();
-  ['t1','t2','t3'].forEach(id => {
+  ['t1', 't2', 't3'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const cs = getComputedStyle(el);
-
-    // family
-    const famName = (cs.fontFamily.split(',')[0] || '').replace(/['"]/g,'').trim();
-    if (!famName) return;
-
-    // weight 归一：bold→700, normal→400，其它非数值→400
-    let w = cs.fontWeight;
-    if (w === 'bold') w = '700';
-    if (w === 'normal') w = '400';
-    if (!/^\d+$/.test(String(w))) w = '400';
-
-    // style（normal可省略；italic/oblique需保留）
-    let style = cs.fontStyle;
-    if (!style || style === 'normal') style = '';
-    else style = style + ' ';
-
-    // document.fonts.load 语法：[style] [weight] <size> <family>
-    needLoads.add(`${style}${w} 16px ${famName}`);
+    const famName = (cs.fontFamily.split(',')[0] || '').replace(/['"]/g, '').trim();
+    if (famName) needLoads.add(`${cs.fontStyle} ${cs.fontWeight} 16px ${famName}`);
   });
 
   if (needLoads.size === 0) return;
 
   const loads = [...needLoads].map(desc => document.fonts.load(desc));
   const waitAll = Promise.allSettled(loads);
-  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('font-timeout')), timeoutMs));
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('font-timeout')), timeoutMs));
 
   try {
     await Promise.race([waitAll, timeout]);
@@ -1204,25 +1264,35 @@ async function waitActiveFontsWithTimeout(timeoutMs = 1200) {
 async function renderPrintCanvas(includeGuides){
   const { w, h } = state.inches;
 
-  // —— 设备自适配 DPI（iOS 更保守）——
-  const preferDpi  = state.dpi;
-  const MAX_PIXELS = isIOS() ? 36e6 : 64e6;  // iOS ≈ 24–36MP，其他平台放宽
-  const MAX_SIDE   = isIOS() ? 8192  : 10000;
+// —— 设备自适配 DPI（iOS 更保守）——
+const preferDpi  = state.dpi;
+const MAX_PIXELS = isIOS() ? 36e6 : 64e6;   // 总像素上限
+const MAX_SIDE   = isIOS() ? 8192  : 10000; // 单边上限
 
-  // 反算设备可承受的 DPI，上不超过 preferDpi，下不低于 72
-  let dpi = Math.min(preferDpi, Math.max(72, Math.floor(Math.sqrt(MAX_PIXELS / (w * h)))));
+// 先按总像素上限给出一个上限 DPI，再与用户选择的取较小；底限 72
+let dpi = Math.min(
+  preferDpi,
+  Math.max(72, Math.floor(Math.sqrt(MAX_PIXELS / (w * h))))
+);
 
-  let W = Math.round(w * dpi);
-  let H = Math.round(h * dpi);
+// 计算初值
+let W = Math.round(w * dpi);
+let H = Math.round(h * dpi);
 
-  // 二次兜底：边长或像素仍超限则小幅下调
-  if (W > MAX_SIDE || H > MAX_SIDE || (W * H) > MAX_PIXELS) {
-    const step = isIOS() ? 0.85 : 0.90;  // iOS 再保守一点
-    dpi = Math.floor(dpi * step);
-    W = Math.round(w * dpi);
-    H = Math.round(h * dpi);
-    status(`Target adjusted → ${dpi} dpi (${W}×${H}px) for reliability.`);
-  }
+// 每次下调的系数（iOS 更保守）
+const step = isIOS() ? 0.85 : 0.90;
+
+// ⚠️ 循环，直到“单边 & 总像素”都满足限制
+while (W > MAX_SIDE || H > MAX_SIDE || (W * H) > MAX_PIXELS) {
+  dpi = Math.max(72, Math.floor(dpi * step));
+  W = Math.round(w * dpi);
+  H = Math.round(h * dpi);
+}
+
+// 若有效 DPI 被下调，提示一下
+if (dpi !== preferDpi) {
+  status(`Target adjusted → ${dpi} dpi (${W}×${H}px) for reliability.`);
+}
 
   // —— 组装离屏 DOM（背景 + 三段文本克隆）——
   printStage.innerHTML = '';
@@ -1330,17 +1400,17 @@ async function renderPrintCanvas(includeGuides){
 
   printStage.appendChild(wrap);
 
-  // ⚠️ 去掉 windowWidth/windowHeight，避免超大布局压力
-  const canvas = await html2canvas(wrap, {
-    allowTaint: false,
-    useCORS: true,
-    backgroundColor: '#ffffff',
-    scale: 1
-  });
+const canvas = await html2canvas(wrap, {
+  allowTaint: false,
+  useCORS: true,
+  backgroundColor: '#ffffff',
+  scale: 1
+});
 
-  // 把有效 DPI 回传给外部，便于命名或日志
-  canvas._effectiveDpi = dpi;
-  return canvas;
+printStage.innerHTML = ''; // ★ 渲染完立刻释放离屏 DOM
+
+canvas._effectiveDpi = dpi;
+return canvas;
 }
 
   async function withBusy(el, fn){
@@ -1360,6 +1430,7 @@ async function renderPrintCanvas(includeGuides){
   // Patch 5: Keyboard micro-adjust (Shift = 5px)
   document.addEventListener('keydown', (e)=>{
     const el = texts[state.activeTextId]; if (!el) return;
+    if (el.classList.contains('editing')) return; // ★ 正在编辑时不要拦截方向键
     if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
     e.preventDefault();
     const step = e.shiftKey ? 5 : 1;
@@ -1537,5 +1608,3 @@ btnClear.addEventListener('click', () => {
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
-
-
