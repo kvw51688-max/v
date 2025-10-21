@@ -438,7 +438,11 @@ sizeSelect.addEventListener('change', (e) => {
   const shadowColor    = document.getElementById('shadowColor');
 
   function status(msg){ statusMsg.textContent=msg; }
-  function isIOS(){ return /iP(hone|ad|od)/i.test(navigator.userAgent); }
+  function isIOS(){
+    const ua = navigator.userAgent;
+    // iPhone/iPod 直接命中；iPadOS 常带 "Macintosh" 但同时具备触摸能力
+    return /iP(hone|od)/i.test(ua) || ((/iPad|Macintosh/i.test(ua)) && ('ontouchend' in document));
+  }
   function lockScroll(){ document.body.style.overflow='hidden'; }
   function unlockScroll(){ document.body.style.overflow=''; }
   function rgbToHex(rgb){ const m=rgb.match(/\d+/g); if(!m) return '#000000'; const [r,g,b]=m.map(Number); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
@@ -514,6 +518,17 @@ if (isIOS()) {
       if(!state.preview.naturalW || !state.preview.naturalH){
         state.preview.naturalW = previewBgImg.naturalWidth;
         state.preview.naturalH = previewBgImg.naturalHeight;
+      }
+
+      // ★ 追加：优先用大图真实尺寸覆盖，避免误报
+      if (state.preview.bgLarge) {
+        const big = new Image();
+        big.crossOrigin = 'anonymous';
+        big.onload = () => {
+          state.preview.naturalW = big.naturalWidth;
+          state.preview.naturalH = big.naturalHeight;
+        };
+        big.src = state.preview.bgLarge;
       }
     };
   }
@@ -1087,7 +1102,15 @@ btnPrintPdf.addEventListener('click', async()=>{
 
       // 直接用 canvas（内部会自行编码 JPEG）
       pdf.addImage(canvas, 'JPEG', 0, 0, wIn, hIn);
-      pdf.save(`poster-print-${state.size}-${effDpi}dpi.pdf`);
+
+      const filename = `poster-print-${state.size}-${effDpi}dpi.pdf`;
+      if (isIOS()) {
+        // iOS 兜底：用 Blob + ObjectURL 打开/下载，避免部分机型 save() 不触发
+        const blob = pdf.output('blob');
+        downloadBlob(blob, filename);
+      } else {
+        pdf.save(filename);
+      }
 
       status('Done.');
     } catch(e){
@@ -1117,7 +1140,8 @@ function downloadBlob(blob, filename) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  // 延后 revoke，避免个别浏览器“点击瞬间被回收”导致空白/失败
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 // 备用兜底（极少数浏览器 toBlob 返回 null）
@@ -1513,4 +1537,5 @@ btnClear.addEventListener('click', () => {
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
 
