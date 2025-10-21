@@ -16,13 +16,6 @@
 <!-- Local Fonts preloads (relative paths; safe for GitHub Pages subpaths) -->
 
   <style>
-    /* 离屏渲染容器，防跳动、防点选 */
-    #printStage{
-      position: fixed;
-      left: -10000px;
-      top: -10000px;
-      pointer-events: none;
-    }
     
   /* ===== Local font faces (exactly as in your repo) ===== */
   
@@ -359,14 +352,14 @@
 
   <script>
   const DEFAULT_BG = {
-    '24x30': { small: 'assets/24-30-1.webp', large: 'assets/24-30-1.jpg' },
-    '24x50': { small: 'assets/24-50-1.webp', large: 'assets/24-50-1.jpg' }
+    '24x30': { small: 'assets/24-30-1.webp', large: 'assets/24-30-1.png' },
+    '24x50': { small: 'assets/24-50-1.webp', large: 'assets/24-50-1.png' }
   };
   const ASSET_LIBRARY = [
     { id:'lib-2430-1', label:'24×30 – BG #1', size:'24x30',
-      small:'assets/24-30-1.webp', large:'assets/24-30-1.jpg', naturalW: 7200, naturalH: 9000 },
+      small:'assets/24-30-1.webp', large:'assets/24-30-1.png', naturalW: 3600, naturalH: 4500 },
     { id:'lib-2450-1', label:'24×50 – BG #1', size:'24x50',
-      small:'assets/24-50-1.webp', large:'assets/24-50-1.jpg', naturalW: 7200, naturalH: 15000 }
+      small:'assets/24-50-1.webp', large:'assets/24-50-1.png', naturalW: 4800, naturalH: 10000 }
   ];
   const PAGE_SIZE = 12;
 
@@ -445,11 +438,7 @@ sizeSelect.addEventListener('change', (e) => {
   const shadowColor    = document.getElementById('shadowColor');
 
   function status(msg){ statusMsg.textContent=msg; }
-  function isIOS(){
-    const ua = navigator.userAgent;
-    // iPhone/iPod 直接命中；iPadOS 常带 "Macintosh" 但同时具备触摸能力
-    return /iP(hone|od)/i.test(ua) || ((/iPad|Macintosh/i.test(ua)) && ('ontouchend' in document));
-  }
+  function isIOS(){ return /iP(hone|ad|od)/i.test(navigator.userAgent); }
   function lockScroll(){ document.body.style.overflow='hidden'; }
   function unlockScroll(){ document.body.style.overflow=''; }
   function rgbToHex(rgb){ const m=rgb.match(/\d+/g); if(!m) return '#000000'; const [r,g,b]=m.map(Number); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
@@ -489,15 +478,10 @@ if (v === '24x30') {
   previewStage.style.aspectRatio = '4/5';
 } else {
   state.inches = { w:24, h:50 };
-  previewStage.style.aspectRatio =(24 / 50); // 用数值更稳
+  previewStage.style.aspectRatio = (24 / 50); // 用数值更稳
 }
 
-if (isIOS()) {
-  const auto = autoDpiForDevice(state.inches.w, state.inches.h, parseInt(dpiSelect.value || state.dpi, 10));
-  dpiSelect.value = String(auto);
-  setDpi(auto);
-  status(`iOS detected: DPI adjusted to ${auto} for reliability.`);
-}
+    if(isIOS() && v==='24x50'){ dpiSelect.value='200'; setDpi(200); status('On iPhone: 200 DPI set for stability.'); }
 
     const pick = state.picks[v];
     if (pick && pick.small && pick.large){
@@ -518,88 +502,58 @@ if (isIOS()) {
     specInfo.innerHTML = `<b>Spec:</b> Print ${w}×${h} in @ ${state.dpi} dpi → <b>${printWpx}×${printHpx} px</b>`;
   }
 
-function applyPreviewBg() {
-  previewStage.style.width = `${state.preview.width}px`;
-  previewStage.style.height = `${state.preview.height}px`;
-  previewStage.style.background = '#fff';  // 确保背景色正确
-
-  previewBgImg.style.width = '100%';
-  previewBgImg.style.height = '100%';
-  previewBgImg.style.objectFit = 'cover';
-
-  const bgSrc = state.preview.bgSmall || DEFAULT_BG[state.size].small;
-  previewBgImg.src = bgSrc;
-
-  previewBgImg.onload = () => {
-    if (!state.preview.naturalW || !state.preview.naturalH) {
-      state.preview.naturalW = previewBgImg.naturalWidth;
-      state.preview.naturalH = previewBgImg.naturalHeight;
-    }
-
-    // 加载大图时，优先用大图的尺寸
-    if (state.preview.bgLarge) {
-      const big = new Image();
-      big.crossOrigin = 'anonymous';
-      big.onload = () => {
-        state.preview.naturalW = big.naturalWidth;
-        state.preview.naturalH = big.naturalHeight;
-      };
-      big.src = state.preview.bgLarge;
-    }
-  };
-
-  previewBgImg.onerror = () => {
-    console.error('Failed to load background image:', bgSrc);
-  };
-}
-
-  previewBgImg.onerror = () => {
-    console.error('Failed to load background image:', bgSrc);
-  };
-}
+  function applyPreviewBg(){
+    previewBgImg.crossOrigin = 'anonymous';
+    previewBgImg.src = state.preview.bgSmall || DEFAULT_BG[state.size].small;
+    previewBgImg.onload = ()=>{
+      if(!state.preview.naturalW || !state.preview.naturalH){
+        state.preview.naturalW = previewBgImg.naturalWidth;
+        state.preview.naturalH = previewBgImg.naturalHeight;
+      }
+    };
+  }
 
   function getAllItemsForSize(size){ return ASSET_LIBRARY.filter(i=>i.size===size); }
-function buildThumbs() {
-  thumbGrid.innerHTML = '';
-  const size = state.size;
-  const all = getAllItemsForSize(size);
-  const total = all.length || 1;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const page = Math.min(Math.max(0, state.pageIndex[size] || 0), totalPages - 1);
-  state.pageIndex[size] = page;
+  function buildThumbs(){
+    thumbGrid.innerHTML='';
+    const size = state.size;
+    const all = getAllItemsForSize(size);
+    const total = all.length || 1;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const page = Math.min(Math.max(0, state.pageIndex[size] || 0), totalPages - 1);
+    state.pageIndex[size] = page;
 
-  const start = page * PAGE_SIZE, end = Math.min(total, start + PAGE_SIZE);
-  const pageItems = all.slice(start, end);
+    const start = page * PAGE_SIZE, end = Math.min(total, start + PAGE_SIZE);
+    const pageItems = all.slice(start, end);
 
-  pageItems.forEach(item => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'relative border-2 border-transparent rounded-lg overflow-hidden bg-slate-200 aspect-[3/2]';
-    btn.title = item.label || 'Background';
-    btn.dataset.small = item.small;
-    btn.dataset.large = item.large || item.small;
-    btn.dataset.nw = item.naturalW || '';
-    btn.dataset.nh = item.naturalH || '';
-    btn.innerHTML = `<img alt="${item.label || 'bg'}" loading="lazy" class="w-full h-full object-cover" src="${item.small}">`;
-
-    btn.addEventListener('click', () => {
-      state.preview.isLocal = false;
-      state.preview.bgSmall = item.small;
-      state.preview.bgLarge = item.large || item.small;
-      state.preview.naturalW = parseInt(btn.dataset.nw || '0', 10) || null;
-      state.preview.naturalH = parseInt(btn.dataset.nh || '0', 10) || null;
-      applyPreviewBg();
-      status('Background set from library.');
+    pageItems.forEach(item=>{
+      const btn = document.createElement('button');
+      btn.type='button';
+      btn.className='relative border-2 border-transparent rounded-lg overflow-hidden bg-slate-200 aspect-[3/2]';
+      btn.title = item.label || 'Background';
+      btn.dataset.small = item.small;
+      btn.dataset.large = item.large || item.small;
+      btn.dataset.nw = item.naturalW||'';
+      btn.dataset.nh = item.naturalH||'';
+      btn.innerHTML = `<img alt="${item.label||'bg'}" loading="lazy" class="w-full h-full object-cover" src="${item.small}">`;
+      btn.addEventListener('click',()=>{
+        state.preview.isLocal=false;
+        state.preview.bgSmall=item.small;
+        state.preview.bgLarge=item.large||item.small;
+        state.preview.naturalW=parseInt(btn.dataset.nw||'0',10)||null;
+        state.preview.naturalH=parseInt(btn.dataset.nh||'0',10)||null;
+        applyPreviewBg();
+        status('Background set from library.');
+      });
+      thumbGrid.appendChild(btn);
     });
-    thumbGrid.appendChild(btn);
-  });
 
-  pageInfo.textContent = `Page ${page + 1} / ${totalPages}`;
-  pageFirst.disabled = (page === 0);
-  pagePrev.disabled = (page === 0);
-  pageNext.disabled = (page >= totalPages - 1);
-  pageLast.disabled = (page >= totalPages - 1);
-}
+    pageInfo.textContent = `Page ${page+1} / ${totalPages}`;
+    pageFirst.disabled = (page === 0);
+    pagePrev.disabled  = (page === 0);
+    pageNext.disabled  = (page >= totalPages-1);
+    pageLast.disabled  = (page >= totalPages-1);
+  }
   pageFirst.addEventListener('click', ()=>{ state.pageIndex[state.size]=0; buildThumbs(); });
   pagePrev .addEventListener('click', ()=>{ state.pageIndex[state.size]=Math.max(0,(state.pageIndex[state.size]||0)-1); buildThumbs(); });
   pageNext .addEventListener('click', ()=>{
@@ -613,69 +567,23 @@ function buildThumbs() {
     state.pageIndex[state.size]=totalPages-1; buildThumbs();
   });
 
-bgUpload.addEventListener('change', async (e) => {
-  const file = (e.target && e.target.files && e.target.files[0]) || null;
-  if (!file) return;
-
-  // 通过压缩图像进行预处理（限制最大尺寸）
-  const dataUrl = await compressImage(file);  // 这里调用压缩函数来处理文件
-  const img = new Image();
-  
-  img.onload = () => {
-    state.preview.isLocal = true;
-    state.preview.bgSmall = dataUrl;
-    state.preview.bgLarge = dataUrl;
-    state.preview.naturalW = img.naturalWidth;
-    state.preview.naturalH = img.naturalHeight;
-    
-    applyPreviewBg();
-    status(`Local background loaded: ${img.naturalWidth}×${img.naturalHeight}`);
-    e.target.value = '';  // 重置文件输入，避免重复选择相同文件时触发事件
-  };
-  
-  img.src = dataUrl;  // 设置图像源为处理后的 dataUrl
-});
-
-// 压缩图像函数（可根据需要调整压缩参数）
-async function compressImage(file) {
-  const maxWidth = 1200;  // 最大宽度
-  const maxHeight = 1200;  // 最大高度
-  
-  // 创建一个新的 Image 对象
-  const img = new Image();
-  
-  // 使用 FileReader 将图像加载到内存中
-  const dataUrl = await new Promise((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onload = () => resolve(fr.result);
-    fr.onerror = reject;
-    fr.readAsDataURL(file);
-  });
-
-  // 图像加载完毕后进行压缩
-  img.src = dataUrl;
-  
-  return new Promise((resolve, reject) => {
-    img.onload = () => {
-      // 获取压缩后的宽高比例
-      const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      // 设置压缩后的宽高
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-      
-      // 绘制图像并返回压缩后的图片
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
-      // 返回压缩后的图像数据
-      resolve(canvas.toDataURL(file.type));  // 返回 dataURL 格式的压缩图像
+  bgUpload.addEventListener('change', async(e)=>{
+    const file = (e.target && e.target.files && e.target.files[0]) || null;
+if (!file) return;
+    const dataUrl=await new Promise((resolve,reject)=>{ const fr=new FileReader(); fr.onload=()=>resolve(fr.result); fr.onerror=reject; fr.readAsDataURL(file); });
+    const img=new Image();
+    img.onload=()=>{
+      state.preview.isLocal=true;
+      state.preview.bgSmall=dataUrl;
+      state.preview.bgLarge=dataUrl;
+      state.preview.naturalW=img.naturalWidth;
+      state.preview.naturalH=img.naturalHeight;
+      applyPreviewBg();
+      status(`Local background loaded: ${img.naturalWidth}×${img.naturalHeight}`);
+      e.target.value='';
     };
-    
-    img.onerror = reject;
+    img.src=dataUrl;
   });
-}
   resetBg.addEventListener('click', ()=>{
     const v = state.size;
     Object.assign(state.preview, { isLocal:false, bgSmall:DEFAULT_BG[v].small, bgLarge:DEFAULT_BG[v].large, naturalW:null, naturalH:null });
@@ -1070,131 +978,67 @@ function clampPositionsToStage(){
     }
     return true;
   }
-function shouldDownscale(wPx, hPx){
-  const MAX_SIDE   = isIOS() ? 8192 : 10000;     // iOS 更保守
-  const MAX_PIXELS = isIOS() ? 36e6 : 64e6;      // iOS ≈ 24–36MP
-  return (wPx > MAX_SIDE || hPx > MAX_SIDE || (wPx*hPx) > MAX_PIXELS);
-}
-
-// 根据设备反算可承受的 DPI（优先使用用户选择，但不超过上限）
-function autoDpiForDevice(wIn, hIn, preferDpi) {
-  const MAX_PIXELS = isIOS() ? 36e6 : 64e6;
-  const MAX_SIDE   = isIOS() ? 8192  : 10000;
-  const dpiByPixels = Math.floor(Math.sqrt(MAX_PIXELS / (wIn * hIn)));
-  const dpiBySide   = Math.floor(Math.min(MAX_SIDE / wIn, MAX_SIDE / hIn));
-  const dpiMax = Math.max(72, Math.min(dpiByPixels, dpiBySide));
-  return Math.min(preferDpi, Math.max(72, dpiMax)); // 底限 72dpi
-}
-
-btnWebPng.addEventListener('click', async()=>{
-  if (!window.html2canvas) {
-    alert('Exporter is still loading, please try again in a moment.');
-    return;
+  function shouldDownscale(wPx, hPx){
+    const MAX_SIDE = 10000, MAX_PIXELS = 80e6;
+    return (wPx > MAX_SIDE || hPx > MAX_SIDE || (wPx*hPx) > MAX_PIXELS);
   }
-  try{
-    document.body.style.overflow='hidden';
-    status('Generating web preview PNG…');
-    await waitActiveFontsWithTimeout(1200);
 
-    const canvas = await html2canvas(previewStage, {
-      allowTaint:false,
-      useCORS:true,
-      backgroundColor:'#ffffff',
-      scale:1,
-      ignoreElements: el => (el && el.classList && el.classList.contains('export-ignore'))
+  btnWebPng.addEventListener('click', async()=>{
+      if (!window.html2canvas) { 
+    alert('Exporter is still loading, please try again in a moment.'); 
+    return; 
+  }
+    
+    try{
+      document.body.style.overflow='hidden';
+      status('Generating web preview PNG…');
+      await waitActiveFontsWithTimeout(1200);
+      const dataUrl=await html2canvas(previewStage,{
+        allowTaint:false, useCORS:true, backgroundColor:'#ffffff', scale:1,
+        ignoreElements: el => (el && el.classList && el.classList.contains('export-ignore'))
+      }).then(c=>c.toDataURL('image/png'));
+      const a=document.createElement('a'); a.href=dataUrl; a.download='poster-web-'+state.size+'.png'; document.body.appendChild(a); a.click(); a.remove();
+      status('Done.');
+    } catch(e){
+      handleExportError(e);
+    } finally { document.body.style.overflow=''; }
+  });
+
+  btnPrintPng.addEventListener('click', async()=>{
+      if (!window.html2canvas) { 
+    alert('Exporter is still loading, please try again in a moment.'); 
+    return; 
+  }
+    
+    if(!checkResolutionOk()) return;
+    await withBusy(btnPrintPng, async()=>{
+      try{
+        status(`Rendering print PNG (${state.dpi} dpi)…`);
+        await waitActiveFontsWithTimeout(1200);
+        const dataUrl=await renderPrintCanvas(false).then(c=>c.toDataURL('image/png'));
+        const a=document.createElement('a'); a.href=dataUrl; a.download='poster-print-'+state.size+'-'+state.dpi+'dpi.png'; document.body.appendChild(a); a.click(); a.remove();
+        status('Done.');
+      } catch(e){ handleExportError(e); throw e; }
     });
-    printStage.innerHTML = '';
-
-    await new Promise(res => canvas.toBlob((blob) => {
-      if (blob) {
-        downloadBlob(blob, `poster-web-${state.size}.png`);
-      } else {
-        // 极少数兜底
-        const dataUrl = canvas.toDataURL('image/png');
-        downloadDataURL(dataUrl, `poster-web-${state.size}.png`);
-      }
-      res();
-    }, 'image/png'));
-
-    status('Done.');
-  } catch(e){
-    handleExportError(e);
-  } finally {
-    document.body.style.overflow='';
-  }
-});
-
-btnPrintPng.addEventListener('click', async()=>{
-  if (!window.html2canvas) {
-    alert('Exporter is still loading, please try again in a moment.');
-    return;
-  }
-  if(!checkResolutionOk()) return;
-
-  await withBusy(btnPrintPng, async()=>{
-    try{
-      status(`Rendering print PNG (${state.dpi} dpi)…`);
-      await waitActiveFontsWithTimeout(1200);
-
-      const canvas = await renderPrintCanvas(false);
-      const effDpi = canvas._effectiveDpi || state.dpi;
-
-      await new Promise(res => canvas.toBlob((blob) => {
-        if (blob) {
-          downloadBlob(blob, `poster-print-${state.size}-${effDpi}dpi.png`);
-        } else {
-          const dataUrl = canvas.toDataURL('image/png');
-          downloadDataURL(dataUrl, `poster-print-${state.size}-${effDpi}dpi.png`);
-        }
-        res();
-      }, 'image/png'));
-
-      status('Done.');
-    } catch(e){
-      handleExportError(e);
-      throw e;
-    }
   });
-});
 
-btnPrintPdf.addEventListener('click', async()=>{
-  if(!checkResolutionOk()) return;
-
-  await withBusy(btnPrintPdf, async()=>{
-    try{
-      status(`Rendering print PDF (${state.dpi} dpi, true inches)…`);
-      await waitActiveFontsWithTimeout(1200);
-
-      const canvas = await renderPrintCanvas(includeGuidesPdf.checked);
-      const { jsPDF } = window.jspdf;
-      const wIn = state.inches.w, hIn = state.inches.h;
-      const effDpi = canvas._effectiveDpi || state.dpi;
-
-      const pdf = new jsPDF({
-        orientation: wIn > hIn ? 'l' : 'p',
-        unit: 'in',
-        format: [wIn, hIn]
-      });
-
-      // 直接用 canvas（内部会自行编码 JPEG）
-      pdf.addImage(canvas, 'JPEG', 0, 0, wIn, hIn, undefined, 'FAST');
-
-      const filename = `poster-print-${state.size}-${effDpi}dpi.pdf`;
-      if (isIOS()) {
-        // iOS 兜底：用 Blob + ObjectURL 打开/下载，避免部分机型 save() 不触发
-        const blob = pdf.output('blob');
-        downloadBlob(blob, filename);
-      } else {
-        pdf.save(filename);
-      }
-
-      status('Done.');
-    } catch(e){
-      handleExportError(e);
-      throw e;
-    }
+  btnPrintPdf.addEventListener('click', async()=>{
+    if(!checkResolutionOk()) return;
+    await withBusy(btnPrintPdf, async()=>{
+      try{
+        status(`Rendering print PDF (${state.dpi} dpi, true inches)…`);
+        await waitActiveFontsWithTimeout(1200);
+        const canvas=await renderPrintCanvas(includeGuidesPdf.checked);
+        const { jsPDF }=window.jspdf;
+        const wIn=state.inches.w, hIn=state.inches.h;
+        const pdf=new jsPDF({orientation:wIn>hIn?'l':'p', unit:'in', format:[wIn,hIn]});
+        const imgData=canvas.toDataURL('image/jpeg',1);
+        pdf.addImage(imgData,'JPEG',0,0,wIn,hIn);
+        pdf.save('poster-print-'+state.size+'-'+state.dpi+'dpi.pdf');
+        status('Done.');
+      } catch(e){ handleExportError(e); throw e; }
+    });
   });
-});
 
   function handleExportError(e){
     console.error(e);
@@ -1204,71 +1048,42 @@ btnPrintPdf.addEventListener('click', async()=>{
       alert('Export failed. Try 200 DPI or a smaller image. If the issue persists, try on a desktop.');
     }
   }
-    
-// ===== Download helpers (use Blob, avoid huge dataURL) =====
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-
-  // 针对 iOS 设备进行优化：iOS 上可能会有文件下载的限制或问题
-  if (isIOS()) {
-    // 在 iOS 上使用新窗口打开 Blob 文件并手动保存
-    a.target = '_blank';  // 打开新的窗口（或标签）
-    // 提供弹窗指引
-    alert('The file will open in a new tab. Please manually save it from there.');
-  }
-
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-
-  // 延迟撤销 URL 对象，避免内存泄漏
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
-
-// 备用兜底（极少数浏览器 toBlob 返回 null）
-function downloadDataURL(dataUrl, filename) {
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = filename;
-
-  // 针对 iOS 设备进行优化：iOS 可能不支持直接通过 Data URL 下载大文件
-  if (isIOS()) {
-    // 在 iOS 上使用新窗口打开 Data URL 文件并手动保存
-    a.target = '_blank';  // 打开新的窗口（或标签）
-    // 提供弹窗指引
-    alert('The file will open in a new tab. Please manually save it from there.');
-  }
-
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
 
     // === Wait only active fonts (family + weight + style) with timeout ===
 async function waitActiveFontsWithTimeout(timeoutMs = 1200) {
   if (!document.fonts || !document.fonts.check) return;
 
-// 等待字体加载，若超时则提示
-async function waitActiveFontsWithTimeout(timeoutMs = 1200) {
-  if (!document.fonts || !document.fonts.check) return;
-
+  // 收集舞台上 3 个文本框“实际正在使用”的 family / weight / style
   const needLoads = new Set();
-  ['t1', 't2', 't3'].forEach(id => {
+  ['t1','t2','t3'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const cs = getComputedStyle(el);
-    const famName = (cs.fontFamily.split(',')[0] || '').replace(/['"]/g, '').trim();
-    if (famName) needLoads.add(`${cs.fontStyle} ${cs.fontWeight} 16px ${famName}`);
+
+    // family
+    const famName = (cs.fontFamily.split(',')[0] || '').replace(/['"]/g,'').trim();
+    if (!famName) return;
+
+    // weight 归一：bold→700, normal→400，其它非数值→400
+    let w = cs.fontWeight;
+    if (w === 'bold') w = '700';
+    if (w === 'normal') w = '400';
+    if (!/^\d+$/.test(String(w))) w = '400';
+
+    // style（normal可省略；italic/oblique需保留）
+    let style = cs.fontStyle;
+    if (!style || style === 'normal') style = '';
+    else style = style + ' ';
+
+    // document.fonts.load 语法：[style] [weight] <size> <family>
+    needLoads.add(`${style}${w} 16px ${famName}`);
   });
 
   if (needLoads.size === 0) return;
 
   const loads = [...needLoads].map(desc => document.fonts.load(desc));
   const waitAll = Promise.allSettled(loads);
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('font-timeout')), timeoutMs));
+  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('font-timeout')), timeoutMs));
 
   try {
     await Promise.race([waitAll, timeout]);
@@ -1280,157 +1095,121 @@ async function waitActiveFontsWithTimeout(timeoutMs = 1200) {
   }
 }
 
-async function renderPrintCanvas(includeGuides){
-  const { w, h } = state.inches;
+  async function renderPrintCanvas(includeGuides){
+    const {w,h}=state.inches; let dpi=state.dpi;
+    let W=Math.round(w*dpi), H=Math.round(h*dpi);
+    if (shouldDownscale(W,H)) {
+      dpi = Math.min(200, dpi); W = Math.round(w*dpi); H = Math.round(h*dpi);
+      status(`Target too large → auto-downgraded to ${dpi} dpi (${W}×${H}px).`);
+    }
 
-// —— 设备自适配 DPI（iOS 更保守）——
-const preferDpi  = state.dpi;
-const MAX_PIXELS = isIOS() ? 36e6 : 64e6;   // 总像素上限
-const MAX_SIDE   = isIOS() ? 8192  : 10000; // 单边上限
+    printStage.innerHTML=''; printStage.style.width=W+'px'; printStage.style.height=H+'px';
+    const wrap=document.createElement('div');
+    wrap.style.cssText=`position:relative;width:${W}px;height:${H}px;overflow:visible;background:#ffffff;`;
+    const img=document.createElement('img');
+    img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
+    img.crossOrigin='anonymous';
+    img.src=state.preview.bgLarge || state.preview.bgSmall || '';
+    wrap.appendChild(img);
 
-// 先按总像素上限给出一个上限 DPI，再与用户选择的取较小；底限 72
-let dpi = Math.min(
-  preferDpi,
-  Math.max(72, Math.floor(Math.sqrt(MAX_PIXELS / (w * h))))
-);
+    const pr=previewStage.getBoundingClientRect();
+    const sx=W/pr.width, sy=H/pr.height;
+    const k=(sx+sy)/2;
 
-// 计算初值
-let W = Math.round(w * dpi);
-let H = Math.round(h * dpi);
+    await new Promise(res=>{ if(!img.src){ res(); return; } img.onload=res; img.onerror=res; });
 
-// 每次下调的系数（iOS 更保守）
-const step = isIOS() ? 0.85 : 0.90;
+for (const id of ['t1','t2','t3']) {
+  const src  = texts[id];
+  const srec = src.getBoundingClientRect();
+  const cs   = getComputedStyle(src);
+  const el   = document.createElement('div');
 
-// ⚠️ 循环，直到“单边 & 总像素”都满足限制
-while (W > MAX_SIDE || H > MAX_SIDE || (W * H) > MAX_PIXELS) {
-  dpi = Math.max(72, Math.floor(dpi * step));
-  W = Math.round(w * dpi);
-  H = Math.round(h * dpi);
+  el.textContent = src.textContent;
+  el.style.position = 'absolute';
+
+// 垂直位置（同原来）
+const topPx  = (srec.top  - pr.top ) * sy;
+el.style.top = topPx + 'px';
+
+// 水平位置：区分是否带 translateX(-50%)
+if ((src.style.transform || '').includes('translateX(-50%)')) {
+  // 居中：left 取“中心点像素”，居中由 translateX(-50%) 完成
+  const centerLeftPx = ((srec.left - pr.left) + srec.width / 2) * sx;
+  el.style.left = centerLeftPx + 'px';
+  el.style.transform = 'translateX(-50%)';
+} else {
+  // 非居中：按左边缘像素
+  el.style.left = ((srec.left - pr.left) * sx) + 'px';
 }
 
-// 若有效 DPI 被下调，提示一下
-if (dpi !== preferDpi) {
-  status(`Target adjusted → ${dpi} dpi (${W}×${H}px) for reliability.`);
-}
+  // 锁定导出宽度 = 屏幕宽度 * sx，确保换行一致
+  el.style.width       = (srec.width * sx) + 'px';
+  el.style.whiteSpace  = 'pre-wrap';
+  el.style.wordBreak   = 'break-word';
+  el.style.overflowWrap= 'anywhere';
 
-  // —— 组装离屏 DOM（背景 + 三段文本克隆）——
-  printStage.innerHTML = '';
-  printStage.style.width  = W + 'px';
-  printStage.style.height = H + 'px';
-
-  const wrap = document.createElement('div');
-  wrap.style.cssText = `position:relative;width:${W}px;height:${H}px;overflow:visible;background:#ffffff;`;
-
-  const img = document.createElement('img');
-  img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
-  img.crossOrigin = 'anonymous';
-  img.src = state.preview.bgLarge || state.preview.bgSmall || '';
-  wrap.appendChild(img);
-
-  const pr = previewStage.getBoundingClientRect();
-  const sx = W / pr.width;
-  const sy = H / pr.height;
-
-  await new Promise(res => { if (!img.src) { res(); return; } img.onload = res; img.onerror = res; });
-
-  for (const id of ['t1','t2','t3']) {
-    const src  = texts[id];
-    const srec = src.getBoundingClientRect();
-    const cs   = getComputedStyle(src);
-    const el   = document.createElement('div');
-
-    el.textContent = src.textContent;
-    el.style.position = 'absolute';
-
-    // top：按上边缘缩放
-    const topPx = (srec.top - pr.top) * sy;
-    el.style.top = topPx + 'px';
-
-    // left：区分是否 translateX(-50%)
-    if ((src.style.transform || '').includes('translateX(-50%)')) {
-      const centerLeftPx = ((srec.left - pr.left) + srec.width / 2) * sx;
-      el.style.left = centerLeftPx + 'px';
-      el.style.transform = 'translateX(-50%)';
-    } else {
-      el.style.left = ((srec.left - pr.left) * sx) + 'px';
-    }
-
-    // 固定导出宽度，保证换行一致
-    el.style.width        = (srec.width * sx) + 'px';
-    el.style.whiteSpace   = 'pre-wrap';
-    el.style.wordBreak    = 'break-word';
-    el.style.overflowWrap = 'anywhere';
-
-    // 字号与行高（把各种行高统一为像素后再缩放）
-    const fsPx  = parseFloat(cs.fontSize) || 16;
-    const lhCss = cs.lineHeight;
-    let linePx;
-    if (lhCss === 'normal') {
-      linePx = fsPx * 1.3;
-    } else if (lhCss.endsWith && lhCss.endsWith('px')) {
-      linePx = parseFloat(lhCss) || fsPx * 1.3;
-    } else {
-      const n = parseFloat(lhCss);
-      linePx = Number.isFinite(n) ? fsPx * n : fsPx * 1.3;
-    }
-
-    el.style.fontSize   = (fsPx  * sy) + 'px';
-    el.style.lineHeight = (linePx * sy) + 'px';
-
-    // 其它样式一比一复制
-    el.style.fontFamily     = cs.fontFamily;
-    el.style.color          = cs.color;
-    el.style.fontWeight     = cs.fontWeight;
-    el.style.fontStyle      = cs.fontStyle;
-    el.style.textDecoration = cs.textDecoration;
-    el.style.textAlign      = cs.textAlign;
-
-    // 阴影随垂直缩放
-    const sds    = parseInt(src.dataset.shadowS   || '0', 10);
-    const sblur  = parseFloat(src.dataset.shadowBlur || '0');
-    const scolor = src.dataset.shadowColor || '#000';
-    if (sds > 0) {
-      const off = Math.max(1, Math.round(sds / 10)) * sy;
-      const bl  = Math.max(0.5, sblur * sy);
-      el.style.textShadow = `${off}px ${off}px ${bl}px ${scolor}`;
-    }
-
-    wrap.appendChild(el);
+  // 计算字号与行高（把各种行高统一成像素）
+  const fsPx  = parseFloat(cs.fontSize) || 16;
+  const lhCss = cs.lineHeight;
+  let linePx;
+  if (lhCss === 'normal') {
+    linePx = fsPx * 1.3;
+  } else if (lhCss.endsWith && lhCss.endsWith('px')) {
+    linePx = parseFloat(lhCss) || fsPx * 1.3;
+  } else {
+    const n = parseFloat(lhCss);
+    linePx = Number.isFinite(n) ? fsPx * n : fsPx * 1.3;
   }
 
-  // 可选：导出时画出安全/出血/裁切框
-  if (includeGuides) {
-    const safe   = Math.max(0, parseFloat(safeIn.value)  || 0);
-    const bleed  = Math.max(0, parseFloat(bleedIn.value) || 0);
-    const safePx = safe  * (W / state.inches.w);
-    const bleedPx= bleed * (W / state.inches.w);
+  // 垂直量用 sy（关键）
+  const outFontSize = fsPx  * sy;
+  const outLinePx   = linePx * sy;
 
-    const trim = document.createElement('div');
-    trim.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px;outline:4px dashed rgba(239,68,68,.9)`;
+  el.style.fontSize   = outFontSize + 'px';
+  el.style.lineHeight = outLinePx   + 'px';
 
-    const safeR = document.createElement('div');
-    safeR.style.cssText = `position:absolute;left:${safePx}px;top:${safePx}px;width:${W - 2*safePx}px;height:${H - 2*safePx}px;outline:4px dashed rgba(34,197,94,.9)`;
+  // 其它样式一比一拷贝
+  el.style.fontFamily   = cs.fontFamily;
+  el.style.color        = cs.color;
+  el.style.fontWeight   = cs.fontWeight;
+  el.style.fontStyle    = cs.fontStyle;
+  el.style.textDecoration = cs.textDecoration;
+  el.style.textAlign    = cs.textAlign;
 
-    const bleedR = document.createElement('div');
-    bleedR.style.cssText = `position:absolute;left:${-bleedPx}px;top:${-bleedPx}px;width:${W + 2*bleedPx}px;height:${H + 2*bleedPx}px;outline:4px dashed rgba(59,130,246,.9)`;
-
-    wrap.appendChild(bleedR); wrap.appendChild(trim); wrap.appendChild(safeR);
+  // 阴影随垂直缩放更自然（也可用 k，看你的审美）
+  const sds   = parseInt(src.dataset.shadowS || '0', 10);
+  const sblur = parseFloat(src.dataset.shadowBlur || '0');
+  const scolor= src.dataset.shadowColor || '#000';
+  if (sds > 0) {
+    const off = Math.max(1, Math.round(sds/10)) * sy;
+    const bl  = Math.max(0.5, sblur * sy);
+    el.style.textShadow = `${off}px ${off}px ${bl}px ${scolor}`;
   }
 
-  printStage.appendChild(wrap);
-
-const canvas = await html2canvas(wrap, {
-  allowTaint: false,
-  useCORS: true,
-  backgroundColor: '#ffffff',
-  scale: 1
-});
-
-printStage.innerHTML = ''; // ★ 渲染完立刻释放离屏 DOM
-
-canvas._effectiveDpi = dpi;
-return canvas;
+  wrap.appendChild(el);
 }
+
+    if(includeGuides){
+      const safe = Math.max(0, parseFloat(safeIn.value)||0);
+      const bleed= Math.max(0, parseFloat(bleedIn.value)||0);
+      const safePx  = safe  * (W/state.inches.w);
+      const bleedPx = bleed * (W/state.inches.w);
+      const trim = document.createElement('div');
+      trim.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px;outline:4px dashed rgba(239,68,68,.9)`;
+      const safeR = document.createElement('div');
+      safeR.style.cssText = `position:absolute;left:${safePx}px;top:${safePx}px;width:${W-2*safePx}px;height:${H-2*safePx}px;outline:4px dashed rgba(34,197,94,.9)`;
+      const bleedR= document.createElement('div');
+      bleedR.style.cssText= `position:absolute;left:${-bleedPx}px;top:${-bleedPx}px;width:${W+2*bleedPx}px;height:${H+2*bleedPx}px;outline:4px dashed rgba(59,130,246,.9)`;
+      wrap.appendChild(bleedR); wrap.appendChild(trim); wrap.appendChild(safeR);
+    }
+
+    printStage.appendChild(wrap);
+    const canvas = await html2canvas(wrap, {
+      allowTaint:false, useCORS:true, backgroundColor:'#ffffff', scale:1,
+      windowWidth:W, windowHeight:H,
+    });
+    return canvas;
+  }
 
   async function withBusy(el, fn){
     const old = el.textContent;
@@ -1449,7 +1228,6 @@ return canvas;
   // Patch 5: Keyboard micro-adjust (Shift = 5px)
   document.addEventListener('keydown', (e)=>{
     const el = texts[state.activeTextId]; if (!el) return;
-    if (el.classList.contains('editing')) return; // ★ 正在编辑时不要拦截方向键
     if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
     e.preventDefault();
     const step = e.shiftKey ? 5 : 1;
@@ -1627,4 +1405,3 @@ btnClear.addEventListener('click', () => {
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
-
