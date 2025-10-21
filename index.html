@@ -495,7 +495,34 @@ if (v === '24x30') {
     clampPositionsToStage();
     layoutGuides();
   }
-  function setDpi(v){ state.dpi=parseInt(v,10); updateSpecInfo(); }
+  function setDpi(v) {
+  // Automatically set 200 DPI for iOS to avoid blank file issues
+  if (isIOS()) {
+    state.dpi = 200;
+    dpiSelect.value = 200;
+    status('iOS Device: Using 200 DPI for stability.');
+  } else {
+    state.dpi = parseInt(v, 10);
+  }
+  updateSpecInfo();
+}
+    async function compressImageForMobile(canvas) {
+  const maxWidth = 1920; // Limit for mobile devices
+  const maxHeight = 2560; // Limit for mobile devices
+
+  const scaleX = maxWidth / canvas.width;
+  const scaleY = maxHeight / canvas.height;
+  const scale = Math.min(scaleX, scaleY, 1);
+
+  // Create a compressed canvas
+  const compressedCanvas = document.createElement('canvas');
+  const ctx = compressedCanvas.getContext('2d');
+  compressedCanvas.width = canvas.width * scale;
+  compressedCanvas.height = canvas.height * scale;
+
+  ctx.drawImage(canvas, 0, 0, compressedCanvas.width, compressedCanvas.height);
+  return compressedCanvas;
+}
   function updateSpecInfo(){
     const {w,h}=state.inches;
     const printWpx=Math.round(w*state.dpi), printHpx=Math.round(h*state.dpi);
@@ -1004,41 +1031,61 @@ function clampPositionsToStage(){
     } finally { document.body.style.overflow=''; }
   });
 
-  btnPrintPng.addEventListener('click', async()=>{
-      if (!window.html2canvas) { 
-    alert('Exporter is still loading, please try again in a moment.'); 
-    return; 
-  }
-    
-    if(!checkResolutionOk()) return;
-    await withBusy(btnPrintPng, async()=>{
-      try{
-        status(`Rendering print PNG (${state.dpi} dpi)…`);
-        await waitActiveFontsWithTimeout(1200);
-        const dataUrl=await renderPrintCanvas(false).then(c=>c.toDataURL('image/png'));
-        const a=document.createElement('a'); a.href=dataUrl; a.download='poster-print-'+state.size+'-'+state.dpi+'dpi.png'; document.body.appendChild(a); a.click(); a.remove();
-        status('Done.');
-      } catch(e){ handleExportError(e); throw e; }
-    });
-  });
+btnPrintPng.addEventListener('click', async () => {
+  if (!checkResolutionOk()) return;
 
-  btnPrintPdf.addEventListener('click', async()=>{
-    if(!checkResolutionOk()) return;
-    await withBusy(btnPrintPdf, async()=>{
-      try{
-        status(`Rendering print PDF (${state.dpi} dpi, true inches)…`);
-        await waitActiveFontsWithTimeout(1200);
-        const canvas=await renderPrintCanvas(includeGuidesPdf.checked);
-        const { jsPDF }=window.jspdf;
-        const wIn=state.inches.w, hIn=state.inches.h;
-        const pdf=new jsPDF({orientation:wIn>hIn?'l':'p', unit:'in', format:[wIn,hIn]});
-        const imgData=canvas.toDataURL('image/jpeg',1);
-        pdf.addImage(imgData,'JPEG',0,0,wIn,hIn);
-        pdf.save('poster-print-'+state.size+'-'+state.dpi+'dpi.pdf');
-        status('Done.');
-      } catch(e){ handleExportError(e); throw e; }
-    });
+  await withBusy(btnPrintPng, async () => {
+    try {
+      status(`Rendering print PNG (${state.dpi} dpi)…`);
+      await waitActiveFontsWithTimeout(1200);
+
+      // Compress the canvas image before generating PNG
+      const canvas = await renderPrintCanvas(false);
+      const compressedCanvas = await compressImageForMobile(canvas);
+
+      const dataUrl = compressedCanvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'poster-print-' + state.size + '-' + state.dpi + 'dpi.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      status('Done.');
+    } catch (e) {
+      handleExportError(e);
+      throw e;
+    }
   });
+});
+
+btnPrintPdf.addEventListener('click', async () => {
+  if (!checkResolutionOk()) return;
+
+  await withBusy(btnPrintPdf, async () => {
+    try {
+      status(`Rendering print PDF (${state.dpi} dpi, true inches)…`);
+      await waitActiveFontsWithTimeout(1200);
+
+      // Render the print canvas and compress the image
+      const canvas = await renderPrintCanvas(includeGuidesPdf.checked);
+      const compressedCanvas = await compressImageForMobile(canvas);
+
+      const { jsPDF } = window.jspdf;
+      const wIn = state.inches.w, hIn = state.inches.h;
+      const pdf = new jsPDF({ orientation: wIn > hIn ? 'l' : 'p', unit: 'in', format: [wIn, hIn] });
+
+      // Compress the image before adding to the PDF
+      const imgData = compressedCanvas.toDataURL('image/jpeg', 0.8);  // Set compression ratio to 0.8
+      pdf.addImage(imgData, 'JPEG', 0, 0, wIn, hIn);
+      pdf.save('poster-print-' + state.size + '-' + state.dpi + 'dpi.pdf');
+
+      status('Done.');
+    } catch (e) {
+      handleExportError(e);
+      throw e;
+    }
+  });
+});
 
   function handleExportError(e){
     console.error(e);
@@ -1405,3 +1452,4 @@ btnClear.addEventListener('click', () => {
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
