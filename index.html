@@ -518,69 +518,88 @@ if (isIOS()) {
     specInfo.innerHTML = `<b>Spec:</b> Print ${w}×${h} in @ ${state.dpi} dpi → <b>${printWpx}×${printHpx} px</b>`;
   }
 
-  function applyPreviewBg(){
-    previewBgImg.crossOrigin = 'anonymous';
-    previewBgImg.src = state.preview.bgSmall || DEFAULT_BG[state.size].small;
-    previewBgImg.onload = ()=>{
-      if(!state.preview.naturalW || !state.preview.naturalH){
-        state.preview.naturalW = previewBgImg.naturalWidth;
-        state.preview.naturalH = previewBgImg.naturalHeight;
-      }
+function applyPreviewBg() {
+  previewStage.style.width = `${state.preview.width}px`;
+  previewStage.style.height = `${state.preview.height}px`;
+  previewStage.style.background = '#fff';  // 确保背景色正确
 
-      // ★ 追加：优先用大图真实尺寸覆盖，避免误报
-      if (state.preview.bgLarge) {
-        const big = new Image();
-        big.crossOrigin = 'anonymous';
-        big.onload = () => {
-          state.preview.naturalW = big.naturalWidth;
-          state.preview.naturalH = big.naturalHeight;
-        };
-        big.src = state.preview.bgLarge;
-      }
-    };
-  }
+  previewBgImg.style.width = '100%';
+  previewBgImg.style.height = '100%';
+  previewBgImg.style.objectFit = 'cover';
+
+  const bgSrc = state.preview.bgSmall || DEFAULT_BG[state.size].small;
+  previewBgImg.src = bgSrc;
+
+  previewBgImg.onload = () => {
+    if (!state.preview.naturalW || !state.preview.naturalH) {
+      state.preview.naturalW = previewBgImg.naturalWidth;
+      state.preview.naturalH = previewBgImg.naturalHeight;
+    }
+
+    // 加载大图时，优先用大图的尺寸
+    if (state.preview.bgLarge) {
+      const big = new Image();
+      big.crossOrigin = 'anonymous';
+      big.onload = () => {
+        state.preview.naturalW = big.naturalWidth;
+        state.preview.naturalH = big.naturalHeight;
+      };
+      big.src = state.preview.bgLarge;
+    }
+  };
+
+  previewBgImg.onerror = () => {
+    console.error('Failed to load background image:', bgSrc);
+  };
+}
+
+  previewBgImg.onerror = () => {
+    console.error('Failed to load background image:', bgSrc);
+  };
+}
 
   function getAllItemsForSize(size){ return ASSET_LIBRARY.filter(i=>i.size===size); }
-  function buildThumbs(){
-    thumbGrid.innerHTML='';
-    const size = state.size;
-    const all = getAllItemsForSize(size);
-    const total = all.length || 1;
-    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    const page = Math.min(Math.max(0, state.pageIndex[size] || 0), totalPages - 1);
-    state.pageIndex[size] = page;
+function buildThumbs() {
+  thumbGrid.innerHTML = '';
+  const size = state.size;
+  const all = getAllItemsForSize(size);
+  const total = all.length || 1;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(Math.max(0, state.pageIndex[size] || 0), totalPages - 1);
+  state.pageIndex[size] = page;
 
-    const start = page * PAGE_SIZE, end = Math.min(total, start + PAGE_SIZE);
-    const pageItems = all.slice(start, end);
+  const start = page * PAGE_SIZE, end = Math.min(total, start + PAGE_SIZE);
+  const pageItems = all.slice(start, end);
 
-    pageItems.forEach(item=>{
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='relative border-2 border-transparent rounded-lg overflow-hidden bg-slate-200 aspect-[3/2]';
-      btn.title = item.label || 'Background';
-      btn.dataset.small = item.small;
-      btn.dataset.large = item.large || item.small;
-      btn.dataset.nw = item.naturalW||'';
-      btn.dataset.nh = item.naturalH||'';
-      btn.innerHTML = `<img alt="${item.label||'bg'}" loading="lazy" class="w-full h-full object-cover" src="${item.small}">`;
-      btn.addEventListener('click',()=>{
-        state.preview.isLocal=false;
-        state.preview.bgSmall=item.small;
-        state.preview.bgLarge=item.large||item.small;
-        state.preview.naturalW=parseInt(btn.dataset.nw||'0',10)||null;
-        state.preview.naturalH=parseInt(btn.dataset.nh||'0',10)||null;
-        applyPreviewBg();
-        status('Background set from library.');
-      });
-      thumbGrid.appendChild(btn);
+  pageItems.forEach(item => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'relative border-2 border-transparent rounded-lg overflow-hidden bg-slate-200 aspect-[3/2]';
+    btn.title = item.label || 'Background';
+    btn.dataset.small = item.small;
+    btn.dataset.large = item.large || item.small;
+    btn.dataset.nw = item.naturalW || '';
+    btn.dataset.nh = item.naturalH || '';
+    btn.innerHTML = `<img alt="${item.label || 'bg'}" loading="lazy" class="w-full h-full object-cover" src="${item.small}">`;
+
+    btn.addEventListener('click', () => {
+      state.preview.isLocal = false;
+      state.preview.bgSmall = item.small;
+      state.preview.bgLarge = item.large || item.small;
+      state.preview.naturalW = parseInt(btn.dataset.nw || '0', 10) || null;
+      state.preview.naturalH = parseInt(btn.dataset.nh || '0', 10) || null;
+      applyPreviewBg();
+      status('Background set from library.');
     });
+    thumbGrid.appendChild(btn);
+  });
 
-    pageInfo.textContent = `Page ${page+1} / ${totalPages}`;
-    pageFirst.disabled = (page === 0);
-    pagePrev.disabled  = (page === 0);
-    pageNext.disabled  = (page >= totalPages-1);
-    pageLast.disabled  = (page >= totalPages-1);
-  }
+  pageInfo.textContent = `Page ${page + 1} / ${totalPages}`;
+  pageFirst.disabled = (page === 0);
+  pagePrev.disabled = (page === 0);
+  pageNext.disabled = (page >= totalPages - 1);
+  pageLast.disabled = (page >= totalPages - 1);
+}
   pageFirst.addEventListener('click', ()=>{ state.pageIndex[state.size]=0; buildThumbs(); });
   pagePrev .addEventListener('click', ()=>{ state.pageIndex[state.size]=Math.max(0,(state.pageIndex[state.size]||0)-1); buildThumbs(); });
   pageNext .addEventListener('click', ()=>{
@@ -1608,3 +1627,4 @@ btnClear.addEventListener('click', () => {
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </body>
 </html>
+
